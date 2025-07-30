@@ -16,7 +16,7 @@ from telegram.ext import (
 )
 
 # Импорты наших модулей
-from config import BOT_TOKEN, OPENROUTER_API_KEY, OPENROUTER_CONFIG, DATA_FILES, LLM_LIMITS
+from config import BOT_TOKEN, OPENROUTER_API_KEY, OPENROUTER_CONFIG, DATA_FILES, LLM_LIMITS, ADMIN_USER_ID
 from quiz_system import PerfumeQuizSystem, create_quiz_system
 from ai_prompts import AIPrompts, PromptLimits
 
@@ -93,7 +93,188 @@ class PerfumeConsultantBot:
                 logger.error(f"❌ Файл не найден: {filename}")
                 data[key] = [] if 'json' in filename else {}
         
+        # Загружаем полный каталог для получения URL
+        try:
+            with open('full_perfumes_catalog_complete.json', 'r', encoding='utf-8') as f:
+                full_catalog = json.load(f)
+                data['full_catalog'] = full_catalog
+                logger.info("✅ Загружен полный каталог с URL")
+        except FileNotFoundError:
+            logger.error("❌ Полный каталог не найден")
+            data['full_catalog'] = {'perfumes': []}
+        
         return data
+
+    def _create_perfume_url_mapping(self) -> Dict[str, str]:
+        """Создает словарь сопоставления названий ароматов с URL"""
+        url_mapping = {}
+        
+        if 'full_catalog' in self.normalized_data:
+            perfumes = self.normalized_data['full_catalog'].get('perfumes', [])
+            
+            for perfume in perfumes:
+                # Создаем различные варианты ключей для поиска
+                brand = perfume.get('brand', '').strip()
+                name = perfume.get('name', '').strip()
+                url = perfume.get('url', '')
+                
+                if brand and name and url:
+                    # Основной ключ: "Бренд Название"
+                    main_key = f"{brand} {name}".lower()
+                    url_mapping[main_key] = url
+                    
+                    # Дополнительный ключ: только название
+                    name_key = name.lower()
+                    if name_key not in url_mapping:
+                        url_mapping[name_key] = url
+                    
+                    # Ключ с полным названием
+                    full_title = perfume.get('full_title', '').strip()
+                    if full_title:
+                        full_key = full_title.lower().replace('(мотив)', '').replace(',', '').strip()
+                        url_mapping[full_key] = url
+        
+        logger.info(f"✅ Создан словарь URL для {len(url_mapping)} ароматов")
+        return url_mapping
+
+    def _find_perfume_url(self, perfume_name: str) -> Optional[str]:
+        """Находит URL для аромата по названию"""
+        if not hasattr(self, '_url_mapping'):
+            self._url_mapping = self._create_perfume_url_mapping()
+        
+        # Очищаем название для поиска
+        clean_name = perfume_name.lower().strip()
+        
+        # Прямой поиск
+        if clean_name in self._url_mapping:
+            return self._url_mapping[clean_name]
+        
+        # Поиск по частичному совпадению
+        for key, url in self._url_mapping.items():
+            if clean_name in key or key in clean_name:
+                return url
+        
+        return None
+
+    def _process_ai_response_with_urls(self, ai_response: str) -> str:
+        """Обрабатывает ответ ИИ и заменяет PLACEHOLDER_URL на реальные ссылки"""
+        import re
+        
+        # Паттерн для поиска названий ароматов в ответе
+        # Ищем строки вида "**Название аромата**" или "1. **Название аромата**"
+        pattern = r'\*\*([^*]+)\*\*\s*\([^)]+\)'
+        
+        def replace_placeholder(match):
+            full_match = match.group(0)
+            perfume_name = match.group(1).strip()
+            
+            # Находим URL для этого аромата
+            url = self._find_perfume_url(perfume_name)
+            
+            if url:
+                # Заменяем PLACEHOLDER_URL на реальную ссылку в пределах этого блока
+                # Ищем PLACEHOLDER_URL после найденного названия аромата
+                return full_match
+            else:
+                return full_match
+        
+        # Сначала находим все названия ароматов
+        processed_response = ai_response
+        
+        # Теперь заменяем все PLACEHOLDER_URL на реальные ссылки
+        lines = processed_response.split('\n')
+        current_perfume_url = None
+        
+        for i, line in enumerate(lines):
+            # Если нашли название аромата, запоминаем его URL
+            perfume_match = re.search(pattern, line)
+            if perfume_match:
+                perfume_name = perfume_match.group(1).strip()
+                current_perfume_url = self._find_perfume_url(perfume_name)
+            
+            # Если нашли PLACEHOLDER_URL и у нас есть URL для текущего аромата
+            if 'PLACEHOLDER_URL' in line and current_perfume_url:
+                lines[i] = line.replace('PLACEHOLDER_URL', current_perfume_url)
+                current_perfume_url = None  # Сбрасываем после использования
+            elif 'PLACEHOLDER_URL' in line:
+                # Если нет URL, убираем строку со ссылкой
+                lines[i] = ''
+        
+        return '\n'.join(lines)
+
+    def _extract_perfume_names_from_response(self, response: str) -> List[str]:
+        """Извлекает названия ароматов из ответа ИИ"""
+        import re
+        
+        # Паттерны для поиска названий ароматов
+        patterns = [
+            r'\*\*([^*]+)\*\*\s*\([^)]+\)',  # **Название** (Фабрика)
+            r'^\d+\.\s*\*\*([^*]+)\*\*',     # 1. **Название**
+            r'^\d+\.\s*([^(]+)\s*\(',        # 1. Название (
+        ]
+        
+        perfume_names = []
+        lines = response.split('\n')
+        
+        for line in lines:
+            for pattern in patterns:
+                match = re.search(pattern, line.strip())
+                if match:
+                    name = match.group(1).strip()
+                    if name and name not in perfume_names:
+                        perfume_names.append(name)
+                    break
+        
+        return perfume_names
+
+    def _is_admin(self, user_id: int) -> bool:
+        """Проверяет, является ли пользователь админом"""
+        return user_id == ADMIN_USER_ID and ADMIN_USER_ID != 0
+
+    def _get_admin_keyboard(self) -> InlineKeyboardMarkup:
+        """Создает клавиатуру с админскими функциями"""
+        keyboard = [
+            [
+                InlineKeyboardButton("📊 Статистика", callback_data="admin_stats"),
+                InlineKeyboardButton("💰 Баланс API", callback_data="admin_balance")
+            ],
+            [
+                InlineKeyboardButton("🏭 Анализ фабрик", callback_data="admin_factory_analysis"),
+                InlineKeyboardButton("👥 Пользователи", callback_data="admin_users")
+            ],
+            [
+                InlineKeyboardButton("🔙 Назад в меню", callback_data="main_menu")
+            ]
+        ]
+        return InlineKeyboardMarkup(keyboard)
+
+    async def _show_admin_menu(self, query_or_update) -> None:
+        """Показывает админское меню"""
+        text = (
+            "🔧 <b>Панель администратора</b>\n\n"
+            "Добро пожаловать в админскую панель!\n\n"
+            "📊 <b>Доступные функции:</b>\n"
+            "• <b>Статистика</b> - детальная статистика базы данных\n"
+            "• <b>Баланс API</b> - информация об использовании OpenRouter\n"
+            "• <b>Анализ фабрик</b> - подробный анализ производителей\n"
+            "• <b>Пользователи</b> - статистика активности пользователей\n\n"
+            "Выберите нужную функцию:"
+        )
+        
+        keyboard = self._get_admin_keyboard()
+        
+        if hasattr(query_or_update, 'edit_message_text'):
+            await query_or_update.edit_message_text(
+                text=text,
+                reply_markup=keyboard,
+                parse_mode='HTML'
+            )
+        else:
+            await query_or_update.message.reply_text(
+                text=text,
+                reply_markup=keyboard,
+                parse_mode='HTML'
+            )
     
     def get_user_session(self, user_id: int) -> UserSession:
         """Получает или создает сессию пользователя"""
@@ -103,6 +284,10 @@ class PerfumeConsultantBot:
     
     async def send_main_menu(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         """Отправляет главное меню"""
+        user_id = update.effective_user.id
+        is_admin = self._is_admin(user_id)
+        
+        # Основные функции для всех пользователей
         keyboard = [
             [
                 InlineKeyboardButton("🤔 Парфюмерный вопрос", callback_data="perfume_question"),
@@ -110,31 +295,40 @@ class PerfumeConsultantBot:
             ],
             [
                 InlineKeyboardButton("📖 Что за аромат?", callback_data="fragrance_info"),
-                InlineKeyboardButton("📊 Статистика", callback_data="stats")
-            ],
-            [
-                InlineKeyboardButton("🏭 Анализ фабрик", callback_data="factory_analysis"),
                 InlineKeyboardButton("❓ Помощь", callback_data="help")
             ]
         ]
+        
+        # Добавляем админскую кнопку только для админа
+        if is_admin:
+            keyboard.append([
+                InlineKeyboardButton("🔧 Админ-панель", callback_data="admin_menu")
+            ])
         reply_markup = InlineKeyboardMarkup(keyboard)
         
         stats = self._get_database_stats()
         
-        text = (
+        user_id = update.effective_user.id
+        is_admin = self._is_admin(user_id)
+        
+        base_text = (
             "🌟 <b>Парфюмерный консультант</b>\n\n"
             "Добро пожаловать! Я ваш персональный ИИ-консультант по парфюмерии.\n\n"
             "🎯 <b>Мои возможности:</b>\n"
             "• Отвечаю на любые вопросы о парфюмерии\n"
             "• Подбираю идеальные ароматы по вашим предпочтениям\n"
             "• Даю подробную информацию об ароматах\n"
-            "• Анализирую фабрики и качество продукции\n\n"
+            "• Добавляю прямые ссылки на товары для заказа\n\n"
             f"📚 <b>База данных:</b>\n"
             f"• Ароматов: <b>{stats['total_perfumes']}</b>\n"
             f"• Брендов: <b>{stats['total_brands']}</b>\n"
             f"• Фабрик: <b>{stats['total_factories']}</b>\n\n"
-            "Выберите нужную функцию:"
         )
+        
+        if is_admin:
+            text = base_text + "🔧 <b>Админ-панель доступна</b>\n\nВыберите нужную функцию:"
+        else:
+            text = base_text + "Выберите нужную функцию:"
         
         if update.callback_query:
             await update.callback_query.edit_message_text(
@@ -222,6 +416,9 @@ class PerfumeConsultantBot:
                 temperature=PromptLimits.TEMP_BALANCED
             )
             
+            # Обрабатываем ответ и добавляем ссылки
+            processed_response = self._process_ai_response_with_urls(ai_response)
+            
             # Удаляем сообщение о обработке
             await processing_msg.delete()
             
@@ -233,7 +430,7 @@ class PerfumeConsultantBot:
             ]
             reply_markup = InlineKeyboardMarkup(keyboard)
             
-            response_text = f"🤔 <b>Ответ эксперта:</b>\n\n{ai_response}"
+            response_text = f"🤔 <b>Ответ эксперта:</b>\n\n{processed_response}"
             
             # Разбиваем длинный ответ на части если нужно
             if len(response_text) > 4000:
@@ -395,6 +592,9 @@ class PerfumeConsultantBot:
                 temperature=PromptLimits.TEMP_CREATIVE
             )
             
+            # Обрабатываем ответ и добавляем ссылки
+            processed_response = self._process_ai_response_with_urls(ai_response)
+            
             keyboard = [
                 [InlineKeyboardButton("🎯 Пройти квиз снова", callback_data="perfume_quiz")],
                 [InlineKeyboardButton("❓ Задать вопрос", callback_data="perfume_question")],
@@ -402,7 +602,7 @@ class PerfumeConsultantBot:
             ]
             reply_markup = InlineKeyboardMarkup(keyboard)
             
-            result_text = f"🎯 <b>Ваши персональные рекомендации:</b>\n\n{ai_response}"
+            result_text = f"🎯 <b>Ваши персональные рекомендации:</b>\n\n{processed_response}"
             
             # Разбиваем длинный ответ если нужно
             if len(result_text) > 4000:
@@ -590,16 +790,43 @@ class PerfumeConsultantBot:
                 await self._send_quiz_question(query, user_session)
             return BotState.QUIZ_IN_PROGRESS.value
         
-        elif data == "stats":
-            await self._show_statistics(query)
-            return BotState.MAIN_MENU.value
-        
-        elif data == "factory_analysis":
-            await self._show_factory_analysis(query)
-            return BotState.MAIN_MENU.value
-        
         elif data == "help":
             await self._show_help(query)
+            return BotState.MAIN_MENU.value
+        
+        elif data == "admin_menu":
+            if self._is_admin(update.effective_user.id):
+                await self._show_admin_menu(query)
+            else:
+                await query.answer("❌ Доступ запрещен. Только для администраторов.")
+            return BotState.MAIN_MENU.value
+        
+        elif data == "admin_stats":
+            if self._is_admin(update.effective_user.id):
+                await self._show_statistics(query)
+            else:
+                await query.answer("❌ Доступ запрещен. Только для администраторов.")
+            return BotState.MAIN_MENU.value
+        
+        elif data == "admin_balance":
+            if self._is_admin(update.effective_user.id):
+                await self._show_api_balance(query)
+            else:
+                await query.answer("❌ Доступ запрещен. Только для администраторов.")
+            return BotState.MAIN_MENU.value
+        
+        elif data == "admin_factory_analysis":
+            if self._is_admin(update.effective_user.id):
+                await self._show_factory_analysis(query)
+            else:
+                await query.answer("❌ Доступ запрещен. Только для администраторов.")
+            return BotState.MAIN_MENU.value
+        
+        elif data == "admin_users":
+            if self._is_admin(update.effective_user.id):
+                await self._show_user_statistics(query)
+            else:
+                await query.answer("❌ Доступ запрещен. Только для администраторов.")
             return BotState.MAIN_MENU.value
         
         return BotState.MAIN_MENU.value
@@ -626,7 +853,7 @@ class PerfumeConsultantBot:
         
         text += f"\n💡 <i>Все данные актуальны и готовы для консультаций!</i>"
         
-        keyboard = [[InlineKeyboardButton("🔙 Главное меню", callback_data="main_menu")]]
+        keyboard = [[InlineKeyboardButton("🔙 Админ-панель", callback_data="admin_menu")]]
         reply_markup = InlineKeyboardMarkup(keyboard)
         
         await query.edit_message_text(
@@ -693,7 +920,7 @@ class PerfumeConsultantBot:
             "💡 <i>Все рекомендации основаны на реальных данных из парсинга aroma-euro.ru</i>"
         )
         
-        keyboard = [[InlineKeyboardButton("🔙 Главное меню", callback_data="main_menu")]]
+        keyboard = [[InlineKeyboardButton("🔙 Админ-панель", callback_data="admin_menu")]]
         reply_markup = InlineKeyboardMarkup(keyboard)
         
         await query.edit_message_text(
@@ -701,6 +928,138 @@ class PerfumeConsultantBot:
             reply_markup=reply_markup,
             parse_mode='HTML'
         )
+    
+    async def _show_api_balance(self, query) -> None:
+        """Показывает информацию об API OpenRouter"""
+        try:
+            # Попробуем получить информацию о лимитах через специальный эндпоинт
+            balance_url = "https://openrouter.ai/api/v1/auth/key"
+            
+            async with aiohttp.ClientSession() as session:
+                async with session.get(
+                    balance_url,
+                    headers=self.openrouter_config['headers']
+                ) as response:
+                    if response.status == 200:
+                        data = await response.json()
+                        
+                        balance_text = f"💰 <b>Информация об API OpenRouter:</b>\n\n"
+                        balance_text += f"🔑 <b>Ключ API:</b> Активен\n"
+                        balance_text += f"🤖 <b>Модель:</b> {self.openrouter_config['model']}\n"
+                        
+                        # Если есть данные о лимитах
+                        if 'data' in data:
+                            key_data = data['data']
+                            if 'usage' in key_data:
+                                usage = key_data['usage']
+                                balance_text += f"💸 <b>Использовано:</b> ${usage.get('total_cost', 'N/A')}\n"
+                                balance_text += f"📊 <b>Запросов:</b> {usage.get('requests', 'N/A')}\n"
+                            
+                            if 'limit' in key_data:
+                                limit = key_data['limit']
+                                balance_text += f"💳 <b>Лимит:</b> ${limit.get('amount', 'N/A')}\n"
+                        
+                        balance_text += f"\n📈 <b>Статистика бота:</b>\n"
+                        balance_text += f"• Средняя стоимость вопроса: ~$0.001-0.002\n"
+                        balance_text += f"• Средняя стоимость квиза: ~$0.002-0.003\n"
+                        balance_text += f"• Рекомендуемый месячный бюджет: $5-15\n\n"
+                        balance_text += f"🌐 <b>Ссылка на панель управления:</b>\n"
+                        balance_text += f"[OpenRouter Dashboard](https://openrouter.ai/keys)\n\n"
+                        balance_text += "💡 <i>Для точного баланса проверьте панель управления OpenRouter</i>"
+                        
+                    else:
+                        # Если не удалось получить данные, показываем общую информацию
+                        balance_text = f"💰 <b>Информация об API OpenRouter:</b>\n\n"
+                        balance_text += f"🔑 <b>Статус ключа:</b> Проверяется...\n"
+                        balance_text += f"🤖 <b>Модель:</b> {self.openrouter_config['model']}\n\n"
+                        balance_text += f"📈 <b>Примерная стоимость:</b>\n"
+                        balance_text += f"• Вопрос: ~$0.001-0.002\n"
+                        balance_text += f"• Квиз: ~$0.002-0.003\n"
+                        balance_text += f"• Информация об аромате: ~$0.001-0.002\n\n"
+                        balance_text += f"🌐 <b>Проверить баланс:</b>\n"
+                        balance_text += f"[OpenRouter Dashboard](https://openrouter.ai/keys)\n\n"
+                        balance_text += "💡 <i>Для точного баланса используйте панель управления OpenRouter</i>"
+            
+            keyboard = [[InlineKeyboardButton("🔙 Админ-панель", callback_data="admin_menu")]]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            
+            await query.edit_message_text(
+                text=balance_text,
+                reply_markup=reply_markup,
+                parse_mode='HTML',
+                disable_web_page_preview=True
+            )
+            
+        except Exception as e:
+            logger.error(f"Ошибка при получении информации об API: {e}")
+            error_text = (
+                "💰 <b>Информация об API OpenRouter:</b>\n\n"
+                f"🤖 <b>Модель:</b> {self.openrouter_config['model']}\n\n"
+                f"📈 <b>Примерная стоимость:</b>\n"
+                f"• Парфюмерный вопрос: ~$0.001-0.002\n"
+                f"• Прохождение квиза: ~$0.002-0.003\n"
+                f"• Информация об аромате: ~$0.001-0.002\n\n"
+                f"🌐 <b>Проверить точный баланс:</b>\n"
+                f"[OpenRouter Dashboard](https://openrouter.ai/keys)\n\n"
+                f"💡 <i>Рекомендуемый месячный бюджет: $5-15</i>\n\n"
+                f"⚠️ <i>Не удалось получить данные API. Проверьте панель управления.</i>"
+            )
+            keyboard = [[InlineKeyboardButton("🔙 Админ-панель", callback_data="admin_menu")]]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            await query.edit_message_text(
+                text=error_text,
+                reply_markup=reply_markup,
+                parse_mode='HTML',
+                disable_web_page_preview=True
+            )
+    
+    async def _show_user_statistics(self, query) -> None:
+        """Показывает статистику пользователей (только для админа)"""
+        try:
+            total_users = len(self.user_sessions)
+            active_sessions = sum(1 for session in self.user_sessions.values() 
+                                if session.current_state != BotState.MAIN_MENU)
+            
+            # Статистика по состояниям
+            state_stats = {}
+            for session in self.user_sessions.values():
+                state = session.current_state.name if hasattr(session.current_state, 'name') else str(session.current_state)
+                state_stats[state] = state_stats.get(state, 0) + 1
+            
+            stats_text = f"👥 <b>Статистика пользователей:</b>\n\n"
+            stats_text += f"📊 <b>Общая статистика:</b>\n"
+            stats_text += f"• Всего пользователей: <b>{total_users}</b>\n"
+            stats_text += f"• Активных сессий: <b>{active_sessions}</b>\n\n"
+            
+            if state_stats:
+                stats_text += f"📈 <b>По состояниям:</b>\n"
+                for state, count in state_stats.items():
+                    stats_text += f"• {state}: <b>{count}</b>\n"
+            
+            stats_text += f"\n💡 <i>Статистика обновляется в реальном времени</i>"
+            
+            keyboard = [[InlineKeyboardButton("🔙 Админ-панель", callback_data="admin_menu")]]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            
+            await query.edit_message_text(
+                text=stats_text,
+                reply_markup=reply_markup,
+                parse_mode='HTML'
+            )
+            
+        except Exception as e:
+            logger.error(f"Ошибка при получении статистики пользователей: {e}")
+            error_text = (
+                "❌ <b>Ошибка при получении статистики пользователей</b>\n\n"
+                "Произошла техническая ошибка. Попробуйте позже."
+            )
+            keyboard = [[InlineKeyboardButton("🔙 Админ-панель", callback_data="admin_menu")]]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            await query.edit_message_text(
+                text=error_text,
+                reply_markup=reply_markup,
+                parse_mode='HTML'
+            )
     
     def create_application(self) -> Application:
         """Создает приложение Telegram бота"""
