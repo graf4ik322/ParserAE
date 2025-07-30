@@ -89,6 +89,12 @@ class AutoParserService:
     def load_last_check_data(self) -> Dict[str, Any]:
         """Загружает данные последней проверки"""
         try:
+            # Проверяем, что это файл, а не директория
+            if os.path.isdir(self.last_check_file):
+                logger.warning(f"Найдена директория вместо файла: {self.last_check_file}, удаляем")
+                import shutil
+                shutil.rmtree(self.last_check_file)
+            
             if os.path.exists(self.last_check_file):
                 with open(self.last_check_file, 'r', encoding='utf-8') as f:
                     return json.load(f)
@@ -144,7 +150,8 @@ class AutoParserService:
             
             # Запускаем парсер
             parser = CompleteParfumeParser(max_workers=2)
-            parser.run_complete_parsing()
+            parser.perfumes = parser.parse_all_catalog()
+            parser.save_to_json()
             
             # Проверяем изменения
             new_hash = self.get_file_hash(self.catalog_file)

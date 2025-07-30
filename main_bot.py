@@ -1339,6 +1339,7 @@ class PerfumeConsultantBot:
                 CommandHandler("start", self.send_main_menu),
                 CallbackQueryHandler(self.handle_callback_query)
             ],
+            per_message=False,
         )
         
         application.add_handler(conv_handler)
