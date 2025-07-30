@@ -113,68 +113,92 @@ class PerfumeConsultantBot:
     
     def _format_text_for_telegram(self, text: str) -> str:
         """Форматирует текст для лучшей читаемости в Telegram"""
-        import re
         
-        # Убираем все ** без замены на теги, делаем название курсивом с эмодзи
-        text = re.sub(r'\*\*(.*?)\*\*', r'💎 <i>\1</i>', text)
+        # Чистим текст от лишнего форматирования
+        text = self._clean_markdown_formatting(text)
+        
+        # Применяем красивое форматирование
+        text = self._apply_telegram_formatting(text)
+        
+        # Структурируем блоки текста
+        text = self._structure_text_blocks(text)
+        
+        return text.strip()
+    
+    def _clean_markdown_formatting(self, text: str) -> str:
+        """Убирает лишнее markdown форматирование"""
+        # Убираем двойные звездочки и заменяем на жирный текст
+        text = re.sub(r'\*\*(.*?)\*\*', r'<b>\1</b>', text)
         
         # Убираем одинарные звездочки
-        text = re.sub(r'\*([^*]+?)\*', r'\1', text)
+        text = re.sub(r'\*([^*\n]+?)\*', r'\1', text)
         
-        # Убираем квадратные скобки
-        text = re.sub(r'\[([^\]]+?)\]', r'\1', text)
+        # Убираем квадратные скобки кроме артикулов
+        text = re.sub(r'\[(?!Артикул:)([^\]]+?)\]', r'\1', text)
         
-        # Ограничиваем количество эмодзи
-        emoji_count = len(re.findall(r'[\U0001F600-\U0001F64F\U0001F300-\U0001F5FF\U0001F680-\U0001F6FF\U0001F1E0-\U0001F1FF\U00002600-\U000027BF\U0001f900-\U0001f9ff\U0001f018-\U0001f270]', text))
-        if emoji_count > TEXT_FORMATTING['max_emojis_per_message']:
-            # Удаляем лишние эмодзи, оставляя только первые
-            emojis_found = 0
-            def replace_emoji(match):
-                nonlocal emojis_found
-                emojis_found += 1
-                if emojis_found <= TEXT_FORMATTING['max_emojis_per_message']:
-                    return match.group(0)
-                return ''
-            
-            text = re.sub(r'[\U0001F600-\U0001F64F\U0001F300-\U0001F5FF\U0001F680-\U0001F6FF\U0001F1E0-\U0001F1FF\U00002600-\U000027BF\U0001f900-\U0001f9ff\U0001f018-\U0001f270]', replace_emoji, text)
+        # Очищаем лишние символы
+        text = re.sub(r'_{2,}', '', text)  # Убираем подчеркивания
+        text = re.sub(r'-{3,}', '———', text)  # Заменяем длинные тире на красивые
         
-        # Разбиваем длинные блоки текста
+        return text
+    
+    def _apply_telegram_formatting(self, text: str) -> str:
+        """Применяет красивое форматирование для Telegram"""
         lines = text.split('\n')
         formatted_lines = []
-        current_block = []
         
         for line in lines:
-            if line.strip() == '':
-                if current_block:
-                    formatted_lines.extend(current_block)
-                    formatted_lines.append('')
-                    current_block = []
-            else:
-                current_block.append(line)
+            line = line.strip()
+            if not line:
+                formatted_lines.append(line)
+                continue
                 
-                # Если блок становится слишком длинным, добавляем разделитель
-                if len(current_block) >= TEXT_FORMATTING['max_lines_per_block']:
-                    formatted_lines.extend(current_block)
-                    formatted_lines.append('—' * 20)  # Разделитель
-                    current_block = []
+            # Форматируем заголовки (строки, начинающиеся с цифры и точки)
+            if re.match(r'^\d+\.\s*<b>', line):
+                line = f"🌟 {line}"
+            
+            # Форматируем описания (строки с описанием ароматов)
+            elif '•' in line or line.startswith('—'):
+                line = f"   {line}"  # Добавляем отступ
+            
+            # Форматируем ссылки
+            elif 'Купить товар' in line:
+                line = f"   {line}"
+                
+            formatted_lines.append(line)
         
-        # Добавляем оставшиеся строки
-        if current_block:
-            formatted_lines.extend(current_block)
+        return '\n'.join(formatted_lines)
+    
+    def _structure_text_blocks(self, text: str) -> str:
+        """Структурирует блоки текста для лучшей читаемости"""
+        lines = text.split('\n')
+        result = []
+        prev_was_perfume = False
+        
+        for i, line in enumerate(lines):
+            line = line.strip()
+            
+            # Добавляем разделители между ароматами
+            is_perfume_title = re.match(r'^🌟\s*\d+\.', line)
+            if is_perfume_title and prev_was_perfume:
+                result.append('')  # Пустая строка между ароматами
+                
+            result.append(line)
+            prev_was_perfume = is_perfume_title
         
         # Убираем лишние пустые строки
-        result = []
+        final_result = []
         prev_empty = False
-        for line in formatted_lines:
-            if line.strip() == '':
+        for line in result:
+            if line == '':
                 if not prev_empty:
-                    result.append(line)
+                    final_result.append(line)
                 prev_empty = True
             else:
-                result.append(line)
+                final_result.append(line)
                 prev_empty = False
         
-        return '\n'.join(result)
+        return '\n'.join(final_result)
 
     def _create_perfume_url_mapping(self) -> Dict[str, str]:
         """Создает словарь сопоставления названий ароматов с URL"""
@@ -306,7 +330,6 @@ class PerfumeConsultantBot:
                 return perfume.get('url')
         
         # 7. Поиск по артикулу в ответе ИИ
-        import re
         article_match = re.search(r'\[Артикул:\s*([^\]]+)\]', perfume_name)
         if article_match:
             article = article_match.group(1).strip()
@@ -321,21 +344,23 @@ class PerfumeConsultantBot:
 
     def _process_ai_response_with_urls(self, ai_response: str) -> str:
         """Обрабатывает ответ ИИ и добавляет реальные ссылки на товары"""
-        import re
         
-        # Паттерны для поиска названий ароматов в разных форматах
+        # Улучшенные паттерны для поиска названий ароматов
         patterns = [
-            # 1. Abdul Samad - Al Qurashi Safari Extreme (SELUZ)
-            r'^\d+\.\s*([^(]+?)\s*\([^)]+\)',
-            # **Название** (Фабрика)
-            r'\*\*([^*]+)\*\*\s*\([^)]+\)',
+            # 1. Abdul Samad - Al Qurashi Safari Extreme (SELUZ) [Артикул: XXX]
+            r'^\d+\.\s*([^(]+?)\s*\([^)]+\)(?:\s*\[Артикул:[^\]]+\])?',
+            # **Название** (Фабрика) [Артикул: XXX]
+            r'\*\*([^*]+)\*\*\s*\([^)]+\)(?:\s*\[Артикул:[^\]]+\])?',
+            # <b>Название</b> (Фабрика) [Артикул: XXX]
+            r'<b>([^<]+)</b>\s*\([^)]+\)(?:\s*\[Артикул:[^\]]+\])?',
             # Название (Фабрика) в начале строки
-            r'^([^(]+?)\s*\([^)]+\)',
+            r'^([^(]+?)\s*\([^)]+\)(?:\s*\[Артикул:[^\]]+\])?',
         ]
         
         lines = ai_response.split('\n')
         processed_lines = []
         current_perfume_url = None
+        current_perfume_name = None
         
         for line in lines:
             processed_line = line
@@ -349,24 +374,48 @@ class PerfumeConsultantBot:
                     # Убираем лишние символы из названия
                     perfume_name = re.sub(r'^\d+\.\s*', '', perfume_name)  # Убираем номер
                     perfume_name = re.sub(r'\s*-\s*', ' ', perfume_name)   # Нормализуем тире
+                    perfume_name = re.sub(r'<[^>]+>', '', perfume_name)    # Убираем HTML теги
+                    logger.info(f"Найдено название аромата: '{perfume_name}'")
                     break
             
             # Если нашли название аромата, ищем для него URL и запоминаем
             if perfume_name:
                 current_perfume_url = self._find_perfume_url(perfume_name)
-            
-            # Обрабатываем строки с ссылками
-            if '🛒 [Ссылка на товар]' in processed_line:
+                current_perfume_name = perfume_name
                 if current_perfume_url:
-                    processed_line = processed_line.replace(
-                        '🛒 [Ссылка на товар]', 
-                        f'🛒 [Купить товар]({current_perfume_url})'
-                    )
-                    current_perfume_url = None  # Сбрасываем после использования
+                    logger.info(f"Найден URL для '{perfume_name}': {current_perfume_url}")
                 else:
-                    processed_line = processed_line.replace('🛒 [Ссылка на товар]', '🛒 Товар не найден')
+                    logger.warning(f"URL не найден для '{perfume_name}'")
+            
+            # Обрабатываем строки с ссылками (различные варианты)
+            link_patterns = [
+                '🛒 [Ссылка на товар]',
+                '🛒 [Купить товар]',
+                '🛒 [Заказать]',
+                '🛒 Ссылка на товар',
+                '[Ссылка на товар]'
+            ]
+            
+            for link_pattern in link_patterns:
+                if link_pattern in processed_line:
+                    if current_perfume_url:
+                        processed_line = processed_line.replace(
+                            link_pattern, 
+                            f'🛒 [Купить товар]({current_perfume_url})'
+                        )
+                        logger.info(f"Заменена ссылка для '{current_perfume_name}'")
+                        current_perfume_url = None  # Сбрасываем после использования
+                        current_perfume_name = None
+                    else:
+                        processed_line = processed_line.replace(link_pattern, '')
+                        logger.warning(f"Удалена ссылка без URL")
+                    break
             
             processed_lines.append(processed_line)
+        
+        # Если остались аромат и URL, добавляем ссылку в конец
+        if current_perfume_url and current_perfume_name:
+            processed_lines.append(f'🛒 [Купить {current_perfume_name}]({current_perfume_url})')
         
         # Применяем форматирование для лучшей читаемости
         formatted_response = self._format_text_for_telegram('\n'.join(processed_lines))
@@ -374,7 +423,6 @@ class PerfumeConsultantBot:
 
     def _extract_perfume_names_from_response(self, response: str) -> List[str]:
         """Извлекает названия ароматов из ответа ИИ"""
-        import re
         
         # Паттерны для поиска названий ароматов
         patterns = [
@@ -682,10 +730,16 @@ class PerfumeConsultantBot:
     
     async def _send_quiz_question(self, query_or_update, user_session: UserSession) -> None:
         """Отправляет вопрос квиза"""
+        logger.info(f"Requesting question for step {user_session.quiz_step}, answers: {user_session.quiz_answers}")
         current_question = self.quiz_system.get_next_question(
             user_session.quiz_answers, 
             user_session.quiz_step
         )
+        
+        if current_question:
+            logger.info(f"Got question: {current_question.id} - {current_question.text}")
+        else:
+            logger.info("No more questions available - quiz should end")
         
         if current_question is None:
             # Квиз завершен, показываем результаты

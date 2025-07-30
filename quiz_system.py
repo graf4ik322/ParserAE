@@ -345,8 +345,10 @@ class PerfumeQuizSystem:
         
         # Для остальных вопросов используем базовую логику, но сдвигаем индекс
         base_index = current_step - 2  # Учитываем 2 адаптивных вопроса
-        if base_index >= 0 and base_index + 1 < len(self.questions):
-            return self.questions[base_index + 1]
+        # После адаптивных вопросов продолжаем с вопроса index 1 (age_personality)
+        actual_base_index = base_index + 1  
+        if base_index >= 0 and actual_base_index < len(self.questions):
+            return self.questions[actual_base_index]
         
         return None
     
