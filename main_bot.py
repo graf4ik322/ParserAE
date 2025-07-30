@@ -51,6 +51,8 @@ class UserSession:
     context_data: Dict[str, Any] = None
     # Добавляем маппинг для callback данных
     callback_mapping: Dict[str, str] = None
+    # Добавляем user_id для отслеживания
+    user_id: Optional[int] = None
     
     def __post_init__(self):
         if self.quiz_answers is None:
@@ -67,6 +69,10 @@ class PerfumeConsultantBot:
         self.bot_token = bot_token
         self.openrouter_api_key = openrouter_api_key
         self.user_sessions: Dict[int, UserSession] = {}
+        
+        # Защита от спама API запросов
+        self.user_last_api_call: Dict[int, float] = {}
+        self.api_cooldown_seconds = 30  # Минимум 30 секунд между API запросами для одного пользователя
         
         # Загружаем нормализованные данные
         self.normalized_data = self._load_normalized_data()
@@ -544,7 +550,9 @@ class PerfumeConsultantBot:
     def get_user_session(self, user_id: int) -> UserSession:
         """Получает или создает сессию пользователя"""
         if user_id not in self.user_sessions:
-            self.user_sessions[user_id] = UserSession()
+            session = UserSession()
+            session.user_id = user_id
+            self.user_sessions[user_id] = session
         return self.user_sessions[user_id]
     
     async def send_main_menu(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -667,7 +675,8 @@ class PerfumeConsultantBot:
             ai_response = await self._call_openrouter_api(
                 prompt, 
                 max_tokens=PromptLimits.MAX_TOKENS_QUESTION,
-                temperature=PromptLimits.TEMP_BALANCED
+                temperature=PromptLimits.TEMP_BALANCED,
+                user_id=update.effective_user.id
             )
             
             # Обрабатываем ответ и добавляем ссылки
@@ -707,23 +716,29 @@ class PerfumeConsultantBot:
             
         except Exception as e:
             await processing_msg.delete()
+            logger.error(f"❌ Ошибка при поиске информации: {str(e)}")
             
-            # Создаем промпт для обработки ошибки
-            error_prompt = AIPrompts.create_error_handling_prompt(
-                error_context=str(e),
-                user_input=user_question
-            )
-            
-            try:
-                error_response = await self._call_openrouter_api(
-                    error_prompt, 
-                    max_tokens=PromptLimits.MAX_TOKENS_ERROR
+            # НЕ делаем повторный API запрос при ошибке - это экономит токены и предотвращает каскадные ошибки
+            if "rate-limited" in str(e) or "429" in str(e):
+                error_text = (
+                    "⏱️ Слишком много запросов. Пожалуйста, подождите несколько секунд и попробуйте снова.\n\n"
+                    "💡 Попробуйте:\n"
+                    "• Подождать 30-60 секунд\n"
+                    "• Пройти квиз для подбора ароматов\n"
+                    "• Вернуться в главное меню"
                 )
-                error_text = f"⚠️ {error_response}"
-            except:
+            elif "500" in str(e):
+                error_text = (
+                    "🔧 Временные технические проблемы на сервере.\n\n"
+                    "💡 Попробуйте:\n"
+                    "• Повторить запрос через минуту\n"
+                    "• Пройти квиз для подбора ароматов\n"
+                    "• Вернуться в главное меню"
+                )
+            else:
                 error_text = (
                     "❌ Извините, произошла техническая ошибка при обработке вашего вопроса.\n\n"
-                    "Попробуйте:\n"
+                    "💡 Попробуйте:\n"
                     "• Переформулировать вопрос\n"
                     "• Пройти квиз для подбора ароматов\n"
                     "• Вернуться в главное меню"
@@ -849,7 +864,8 @@ class PerfumeConsultantBot:
             ai_response = await self._call_openrouter_api(
                 prompt, 
                 max_tokens=PromptLimits.MAX_TOKENS_QUIZ,
-                temperature=PromptLimits.TEMP_CREATIVE
+                temperature=PromptLimits.TEMP_CREATIVE,
+                user_id=user_session.user_id
             )
             
             # Обрабатываем ответ и добавляем ссылки
@@ -949,7 +965,8 @@ class PerfumeConsultantBot:
             ai_response = await self._call_openrouter_api(
                 prompt, 
                 max_tokens=PromptLimits.MAX_TOKENS_INFO,
-                temperature=PromptLimits.TEMP_FACTUAL
+                temperature=PromptLimits.TEMP_FACTUAL,
+                user_id=update.effective_user.id
             )
             
             await processing_msg.delete()
@@ -996,8 +1013,25 @@ class PerfumeConsultantBot:
         
         return BotState.MAIN_MENU.value
     
-    async def _call_openrouter_api(self, prompt: str, max_tokens: int = 1000, temperature: float = 0.7) -> str:
-        """Вызывает OpenRouter API"""
+    async def _call_openrouter_api(self, prompt: str, max_tokens: int = 1000, temperature: float = 0.7, user_id: int = None) -> str:
+        """Вызывает OpenRouter API с защитой от ошибок и таймаутами"""
+        import time
+        
+        # Проверка cooldown для предотвращения спама
+        if user_id:
+            current_time = time.time()
+            last_call = self.user_last_api_call.get(user_id, 0)
+            time_since_last = current_time - last_call
+            
+            if time_since_last < self.api_cooldown_seconds:
+                remaining = self.api_cooldown_seconds - time_since_last
+                raise Exception(f"⏱️ Пожалуйста, подождите {remaining:.0f} секунд перед следующим запросом")
+            
+            self.user_last_api_call[user_id] = current_time
+        
+        # Логируем запрос для отладки
+        logger.info(f"🤖 API запрос: модель={self.openrouter_config['model']}, tokens={max_tokens}")
+        
         payload = {
             "model": self.openrouter_config['model'],
             "messages": [
@@ -1014,17 +1048,26 @@ class PerfumeConsultantBot:
             "temperature": temperature
         }
         
-        async with aiohttp.ClientSession() as session:
+        # Настройки таймаута
+        timeout = aiohttp.ClientTimeout(total=60, connect=10)
+        
+        start_time = time.time()
+        async with aiohttp.ClientSession(timeout=timeout) as session:
             async with session.post(
                 self.openrouter_config['base_url'],
                 headers=self.openrouter_config['headers'],
                 json=payload
             ) as response:
+                request_time = time.time() - start_time
+                
                 if response.status == 200:
                     data = await response.json()
-                    return data['choices'][0]['message']['content']
+                    response_text = data['choices'][0]['message']['content']
+                    logger.info(f"✅ API ответ получен за {request_time:.2f}с, длина: {len(response_text)} символов")
+                    return response_text
                 else:
                     error_text = await response.text()
+                    logger.error(f"❌ API ошибка {response.status} за {request_time:.2f}с: {error_text[:200]}...")
                     raise Exception(f"OpenRouter API error: {response.status} - {error_text}")
     
     async def handle_callback_query(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
