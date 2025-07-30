@@ -324,31 +324,31 @@ class PerfumeQuizSystem:
     def get_next_question(self, current_answers: Dict[str, str], 
                          current_step: int) -> Optional[QuizQuestion]:
         """Получает следующий вопрос на основе текущих ответов"""
-        # Если это первый вопрос, возвращаем базовый
+        
+        # Логика: 
+        # Шаг 0: target_person (базовый вопрос 0)
+        # Шаг 1: первый адаптивный вопрос
+        # Шаг 2: второй адаптивный вопрос  
+        # Шаг 3+: остальные базовые вопросы (начиная с индекса 1)
+        
+        # Первый вопрос всегда базовый
         if current_step == 0:
             return self.questions[0]
         
-        # Если выбрали целевую аудиторию, добавляем адаптивные вопросы
-        if current_step == 1 and "target_person" in current_answers:
+        # Адаптивные вопросы на шагах 1 и 2
+        if current_step in [1, 2] and "target_person" in current_answers:
             target = current_answers["target_person"]
             if target in self.adaptive_questions:
                 adaptive_questions = self.adaptive_questions[target]
-                if len(adaptive_questions) > 0:
-                    return adaptive_questions[0]
+                adaptive_index = current_step - 1  # Шаг 1 -> индекс 0, шаг 2 -> индекс 1
+                if adaptive_index < len(adaptive_questions):
+                    return adaptive_questions[adaptive_index]
         
-        if current_step == 2 and "target_person" in current_answers:
-            target = current_answers["target_person"]
-            if target in self.adaptive_questions:
-                adaptive_questions = self.adaptive_questions[target]
-                if len(adaptive_questions) > 1:
-                    return adaptive_questions[1]
-        
-        # Для остальных вопросов используем базовую логику, но сдвигаем индекс
-        base_index = current_step - 2  # Учитываем 2 адаптивных вопроса
-        # После адаптивных вопросов продолжаем с вопроса index 1 (age_personality)
-        actual_base_index = base_index + 1  
-        if base_index >= 0 and actual_base_index < len(self.questions):
-            return self.questions[actual_base_index]
+        # Остальные базовые вопросы (начиная с шага 3)
+        if current_step >= 3:
+            base_question_index = current_step - 2  # Шаг 3 -> индекс 1, шаг 4 -> индекс 2
+            if base_question_index < len(self.questions):
+                return self.questions[base_question_index]
         
         return None
     
