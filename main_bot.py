@@ -5,6 +5,7 @@ import logging
 import json
 import asyncio
 import hashlib
+import re
 from typing import Dict, List, Optional, Any
 from dataclasses import dataclass
 from enum import Enum
@@ -202,78 +203,127 @@ class PerfumeConsultantBot:
         return url_mapping
 
     def _find_perfume_url(self, perfume_name: str) -> Optional[str]:
-        """Находит URL для конкретного аромата"""
+        """Находит URL для конкретного аромата с улучшенным поиском"""
         if 'full_catalog' not in self.normalized_data:
             return None
             
         perfumes = self.normalized_data['full_catalog'].get('perfumes', [])
         normalized_search = perfume_name.lower().strip()
         
-        # Сначала ищем точное совпадение по имени
+        # Убираем лишние символы и нормализуем поиск (сохраняем точки)
+        normalized_search = re.sub(r'[^\w\s\.]', ' ', normalized_search)
+        normalized_search = ' '.join(normalized_search.split())
+        
+        logger.info(f"🔍 Ищем URL для: '{perfume_name}' -> '{normalized_search}'")
+        
+        # 1. Поиск по точному совпадению имени
         for perfume in perfumes:
-            if perfume.get('name', '').lower() == normalized_search:
+            name = perfume.get('name', '').lower().strip()
+            if name and name == normalized_search:
+                logger.info(f"✅ Найдено по имени: {perfume.get('url')}")
                 return perfume.get('url')
         
-        # Затем ищем по полному названию
+        # 2. Поиск по бренду + имени (точное совпадение)
         for perfume in perfumes:
-            full_title = perfume.get('full_title', '').lower()
-            if normalized_search in full_title:
+            brand = perfume.get('brand', '').lower().strip()
+            name = perfume.get('name', '').lower().strip()
+            if brand and name:
+                full_name = f"{brand} {name}"
+                # Нормализуем и сравниваем
+                normalized_full_name = re.sub(r'[^\w\s\.]', ' ', full_name)
+                normalized_full_name = ' '.join(normalized_full_name.split())
+                if normalized_full_name == normalized_search:
+                    logger.info(f"✅ Найдено по бренд+имя: {perfume.get('url')}")
+                    return perfume.get('url')
+        
+        # 3. Поиск по частичному совпадению в имени
+        for perfume in perfumes:
+            name = perfume.get('name', '').lower().strip()
+            if name and normalized_search in name:
+                logger.info(f"✅ Найдено частично в имени: {perfume.get('url')}")
                 return perfume.get('url')
         
-        # Ищем по бренду + имени
+        # 4. Поиск по частичному совпадению в бренде + имени
         for perfume in perfumes:
-            brand_name = f"{perfume.get('brand', '')} {perfume.get('name', '')}".lower().strip()
-            if normalized_search in brand_name or brand_name in normalized_search:
+            brand = perfume.get('brand', '').lower().strip()
+            name = perfume.get('name', '').lower().strip()
+            if brand and name:
+                full_name = f"{brand} {name}"
+                # Нормализуем для поиска
+                normalized_full_name = re.sub(r'[^\w\s\.]', ' ', full_name)
+                normalized_full_name = ' '.join(normalized_full_name.split())
+                if normalized_search in normalized_full_name or normalized_full_name in normalized_search:
+                    logger.info(f"✅ Найдено частично в бренд+имя: {perfume.get('url')}")
+                    return perfume.get('url')
+        
+        # 5. Поиск по полному названию товара
+        for perfume in perfumes:
+            full_title = perfume.get('full_title', '').lower().strip()
+            if full_title and normalized_search in full_title:
+                logger.info(f"✅ Найдено в полном названии: {perfume.get('url')}")
                 return perfume.get('url')
         
+        # 6. Поиск по unique_key
+        for perfume in perfumes:
+            unique_key = perfume.get('unique_key', '').lower().strip()
+            if unique_key and normalized_search in unique_key:
+                logger.info(f"✅ Найдено по unique_key: {perfume.get('url')}")
+                return perfume.get('url')
+        
+        logger.warning(f"❌ URL не найден для: '{perfume_name}'")
         return None
 
     def _process_ai_response_with_urls(self, ai_response: str) -> str:
-        """Обрабатывает ответ ИИ и заменяет PLACEHOLDER_URL на реальные ссылки"""
+        """Обрабатывает ответ ИИ и добавляет реальные ссылки на товары"""
         import re
         
-        # Паттерн для поиска названий ароматов в ответе
-        # Ищем строки вида "**Название аромата**" или "1. **Название аромата**"
-        pattern = r'\*\*([^*]+)\*\*\s*\([^)]+\)'
+        # Паттерны для поиска названий ароматов в разных форматах
+        patterns = [
+            # 1. Abdul Samad - Al Qurashi Safari Extreme (SELUZ)
+            r'^\d+\.\s*([^(]+?)\s*\([^)]+\)',
+            # **Название** (Фабрика)
+            r'\*\*([^*]+)\*\*\s*\([^)]+\)',
+            # Название (Фабрика) в начале строки
+            r'^([^(]+?)\s*\([^)]+\)',
+        ]
         
-        def replace_placeholder(match):
-            full_match = match.group(0)
-            perfume_name = match.group(1).strip()
-            
-            # Находим URL для этого аромата
-            url = self._find_perfume_url(perfume_name)
-            
-            if url:
-                # Заменяем PLACEHOLDER_URL на реальную ссылку в пределах этого блока
-                # Ищем PLACEHOLDER_URL после найденного названия аромата
-                return full_match
-            else:
-                return full_match
-        
-        # Сначала находим все названия ароматов
-        processed_response = ai_response
-        
-        # Теперь заменяем все PLACEHOLDER_URL на реальные ссылки
-        lines = processed_response.split('\n')
+        lines = ai_response.split('\n')
+        processed_lines = []
         current_perfume_url = None
         
-        for i, line in enumerate(lines):
-            # Если нашли название аромата, запоминаем его URL
-            perfume_match = re.search(pattern, line)
-            if perfume_match:
-                perfume_name = perfume_match.group(1).strip()
+        for line in lines:
+            processed_line = line
+            
+            # Ищем название аромата в строке
+            perfume_name = None
+            for pattern in patterns:
+                match = re.search(pattern, line.strip())
+                if match:
+                    perfume_name = match.group(1).strip()
+                    # Убираем лишние символы из названия
+                    perfume_name = re.sub(r'^\d+\.\s*', '', perfume_name)  # Убираем номер
+                    perfume_name = re.sub(r'\s*-\s*', ' ', perfume_name)   # Нормализуем тире
+                    break
+            
+            # Если нашли название аромата, ищем для него URL и запоминаем
+            if perfume_name:
                 current_perfume_url = self._find_perfume_url(perfume_name)
             
-            # Если нашли PLACEHOLDER_URL и у нас есть URL для текущего аромата
-            if 'PLACEHOLDER_URL' in line and current_perfume_url:
-                lines[i] = line.replace('PLACEHOLDER_URL', current_perfume_url)
-                current_perfume_url = None  # Сбрасываем после использования
-            elif 'PLACEHOLDER_URL' in line:
-                # Если нет URL, убираем строку со ссылкой
-                lines[i] = ''
+            # Обрабатываем строки с ссылками
+            if '🛒 [Ссылка на товар]' in processed_line:
+                if current_perfume_url:
+                    processed_line = processed_line.replace(
+                        '🛒 [Ссылка на товар]', 
+                        f'🛒 [Купить товар]({current_perfume_url})'
+                    )
+                    current_perfume_url = None  # Сбрасываем после использования
+                else:
+                    processed_line = processed_line.replace('🛒 [Ссылка на товар]', '🛒 Товар не найден')
+            
+            processed_lines.append(processed_line)
         
         # Применяем форматирование для лучшей читаемости
-        formatted_response = self._format_text_for_telegram('\n'.join(lines))
+        formatted_response = self._format_text_for_telegram('\n'.join(processed_lines))
         return formatted_response
 
     def _extract_perfume_names_from_response(self, response: str) -> List[str]:
