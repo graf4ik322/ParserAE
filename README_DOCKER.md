@@ -1,352 +1,382 @@
-# 🐳 Docker развертывание парфюмерного консультанта
+# 🐳 Perfume Consultant Bot v2.0 - Docker Deployment
 
-Быстрое развертывание Telegram-бота парфюмерного консультанта с помощью Docker и Docker Compose.
+Полное руководство по развертыванию Perfume Consultant Bot v2.0 в Docker контейнерах.
 
 ## 🚀 Быстрый старт
 
-### 1. Предварительные требования
-
-Убедитесь, что на вашем сервере установлены:
-- **Docker** (версия 20.10+)
-- **Docker Compose** (версия 1.27+)
-- **Git** (для клонирования репозитория)
-
-#### Установка Docker на Ubuntu/Debian:
-```bash
-# Обновляем систему
-sudo apt update && sudo apt upgrade -y
-
-# Устанавливаем Docker
-curl -fsSL https://get.docker.com -o get-docker.sh
-sudo sh get-docker.sh
-
-# Добавляем пользователя в группу docker
-sudo usermod -aG docker $USER
-
-# Устанавливаем Docker Compose
-sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-sudo chmod +x /usr/local/bin/docker-compose
-
-# Перезагружаемся для применения изменений
-sudo reboot
-```
-
-### 2. Клонирование и настройка
+### 1. Подготовка окружения
 
 ```bash
-# Клонируем репозиторий
-git clone <your-repo-url>
-cd perfume-consultant-bot
+# Клонируйте репозиторий
+git clone <repository_url>
+cd perfume-bot
 
-# Запускаем автоматическое развертывание
-./deploy.sh
+# Скопируйте и настройте переменные окружения
+cp .env.docker .env
+# Отредактируйте .env файл с вашими токенами
 ```
 
-Скрипт автоматически:
-- Проверит наличие Docker и Docker Compose
-- Создаст `.env` файл из примера
-- Проверит наличие файлов данных
-- Соберет и запустит контейнеры
+### 2. Базовый запуск
 
-### 3. Настройка переменных окружения
-
-Отредактируйте файл `.env`:
 ```bash
-nano .env
+# Используйте удобный скрипт управления
+./docker/docker-control.sh start
+
+# Или напрямую через docker-compose
+docker-compose -f docker-compose.v2.yml up -d
 ```
 
-Заполните обязательные параметры:
-```env
-# Telegram Bot Token (получить у @BotFather)
-BOT_TOKEN=1234567890:ABCDEFGHIJKLMNOPQRSTUVWXYZ
+### 3. Проверка статуса
 
-# OpenRouter API Key (получить на openrouter.ai)
-OPENROUTER_API_KEY=sk-or-v1-abcdefghijklmnopqrstuvwxyz
-
-# Admin User ID (получить у @userinfobot)
-ADMIN_USER_ID=123456789
+```bash
+./docker/docker-control.sh status
 ```
 
-## 🔧 Управление сервисами
+## 📋 Команды управления
 
 ### Основные команды
 
 ```bash
-# Запуск бота
-./scripts/start.sh
+# Запуск (базовая конфигурация)
+./docker/docker-control.sh start
 
-# Остановка бота
-./scripts/stop.sh
+# Запуск с различными профилями
+./docker/docker-control.sh start redis      # С Redis кэшем
+./docker/docker-control.sh start postgres  # С PostgreSQL
+./docker/docker-control.sh start monitoring # С мониторингом
+./docker/docker-control.sh start full      # Полная конфигурация
 
-# Просмотр логов в реальном времени
-./scripts/logs.sh
+# Остановка
+./docker/docker-control.sh stop
 
-# Обновление бота (пересборка и перезапуск)
-./scripts/update.sh
+# Перезапуск
+./docker/docker-control.sh restart
 
-# Полное развертывание (первоначальная настройка)
-./deploy.sh
-```
-
-### Docker Compose команды
-
-```bash
-# Запуск сервисов
-docker-compose up -d
-
-# Остановка сервисов
-docker-compose down
-
-# Просмотр статуса
-docker-compose ps
+# Статус сервисов
+./docker/docker-control.sh status
 
 # Просмотр логов
-docker-compose logs -f perfume-bot
+./docker/docker-control.sh logs
+./docker/docker-control.sh logs perfume-bot
 
-# Перезапуск конкретного сервиса
-docker-compose restart perfume-bot
+# Обновление данных
+./docker/docker-control.sh update
 
-# Пересборка образа
-docker-compose build --no-cache
+# Подключение к контейнеру
+./docker/docker-control.sh shell
+
+# Пересборка образов
+./docker/docker-control.sh build
+
+# Полная очистка
+./docker/docker-control.sh clean
 ```
 
-## 📊 Мониторинг и логирование
+## 🏗️ Архитектура Docker
 
-### Просмотр логов
+### Основные сервисы
+
+```yaml
+services:
+  perfume-bot:     # Основное приложение
+  redis:           # Кэширование (опционально)
+  postgres:        # База данных (опционально)
+  nginx:           # Прокси-сервер (опционально)
+  prometheus:      # Мониторинг (опционально)
+  grafana:         # Визуализация (опционально)
+```
+
+### Профили развертывания
+
+| Профиль | Описание | Сервисы |
+|---------|----------|---------|
+| `basic` | Минимальная конфигурация | perfume-bot |
+| `redis` | С кэшированием | perfume-bot + redis |
+| `postgres` | С базой данных | perfume-bot + postgres |
+| `monitoring` | С мониторингом | perfume-bot + prometheus + grafana |
+| `full` | Полная конфигурация | Все сервисы |
+
+## ⚙️ Конфигурация
+
+### Переменные окружения
+
+Основные переменные в `.env` файле:
+
+```env
+# Обязательные
+BOT_TOKEN=your_telegram_bot_token
+ADMIN_USER_ID=your_telegram_user_id
+OPENROUTER_API_KEY=your_openrouter_api_key
+
+# Опциональные
+OPENROUTER_MODEL=deepseek/deepseek-chat-v3-0324:free
+LOG_LEVEL=INFO
+UPDATE_INTERVAL_HOURS=24
+ENVIRONMENT=production
+```
+
+### Volumes (Постоянные данные)
+
+```yaml
+volumes:
+  - ./perfume_bot/data:/app/perfume_bot/data  # Данные парфюмов
+  - ./logs:/app/logs                          # Логи приложения
+  - ./.env:/app/.env:ro                       # Конфигурация
+```
+
+### Порты
+
+| Сервис | Порт | Описание |
+|--------|------|----------|
+| perfume-bot | 8080 | Веб-интерфейс (будущий) |
+| grafana | 3000 | Мониторинг |
+| prometheus | 9090 | Метрики |
+| nginx | 80, 443 | HTTP/HTTPS прокси |
+
+## 🔧 Управление данными
+
+### Обновление данных парфюмов
 
 ```bash
-# Логи в реальном времени
-docker-compose logs -f perfume-bot
+# Ручное обновление
+./docker/docker-control.sh update
 
-# Последние 100 строк логов
-docker-compose logs --tail=100 perfume-bot
-
-# Логи с временными метками
-docker-compose logs -t perfume-bot
-```
-
-### Веб-интерфейс для логов (опционально)
-
-Запустите Dozzle для веб-просмотра логов:
-```bash
-docker-compose --profile monitoring up -d
-```
-
-Откройте в браузере: `http://your-server:8080`
-
-### Автоматические обновления (опционально)
-
-Включите Watchtower для автоматического обновления:
-```bash
-docker-compose --profile auto-update up -d
-```
-
-## 🔍 Диагностика проблем
-
-### Проверка состояния контейнера
-
-```bash
-# Статус всех сервисов
-docker-compose ps
-
-# Детальная информация о контейнере
-docker inspect perfume-consultant-bot
-
-# Проверка здоровья контейнера
-docker-compose exec perfume-bot python3 -c "print('Bot is healthy!')"
-```
-
-### Распространенные проблемы
-
-#### 1. Контейнер не запускается
-```bash
-# Проверяем логи
-docker-compose logs perfume-bot
-
-# Проверяем .env файл
-cat .env
-
-# Проверяем наличие файлов данных
-ls -la *.json
-```
-
-#### 2. Бот не отвечает
-```bash
-# Проверяем подключение к Telegram API
-docker-compose exec perfume-bot curl -s https://api.telegram.org/bot$BOT_TOKEN/getMe
-
-# Перезапускаем бота
-docker-compose restart perfume-bot
-```
-
-#### 3. Ошибки OpenRouter API
-```bash
-# Проверяем API ключ
-docker-compose exec perfume-bot curl -H "Authorization: Bearer $OPENROUTER_API_KEY" https://openrouter.ai/api/v1/auth/key
-```
-
-## 📁 Структура проекта
-
-```
-perfume-consultant-bot/
-├── Dockerfile                 # Описание Docker образа
-├── docker-compose.yml         # Оркестрация сервисов
-├── .dockerignore              # Исключения для Docker
-├── deploy.sh                  # Скрипт развертывания
-├── scripts/                   # Скрипты управления
-│   ├── start.sh              # Запуск
-│   ├── stop.sh               # Остановка
-│   ├── logs.sh               # Просмотр логов
-│   └── update.sh             # Обновление
-├── logs/                      # Логи (создается автоматически)
-├── .env                       # Переменные окружения
-└── ... (остальные файлы проекта)
-```
-
-## 🔐 Безопасность
-
-### Рекомендации по безопасности
-
-1. **Защита .env файла**:
-```bash
-chmod 600 .env
-```
-
-2. **Регулярные обновления**:
-```bash
-# Обновление системы
-sudo apt update && sudo apt upgrade -y
-
-# Обновление Docker образов
-docker-compose pull
-docker-compose up -d
-```
-
-3. **Мониторинг логов**:
-```bash
-# Настройка ротации логов
-echo '{
-  "log-driver": "json-file",
-  "log-opts": {
-    "max-size": "10m",
-    "max-file": "3"
-  }
-}' | sudo tee /etc/docker/daemon.json
-
-sudo systemctl restart docker
-```
-
-4. **Файрвол**:
-```bash
-# Закрываем ненужные порты
-sudo ufw enable
-sudo ufw allow ssh
-sudo ufw allow 8080  # Только если используете веб-мониторинг
-```
-
-## 🚀 Производственное развертывание
-
-### Системный сервис (systemd)
-
-Создайте systemd сервис для автозапуска:
-
-```bash
-sudo nano /etc/systemd/system/perfume-bot.service
-```
-
-```ini
-[Unit]
-Description=Perfume Consultant Bot
-Requires=docker.service
-After=docker.service
-
-[Service]
-Type=oneshot
-RemainAfterExit=yes
-WorkingDirectory=/path/to/perfume-consultant-bot
-ExecStart=/usr/local/bin/docker-compose up -d
-ExecStop=/usr/local/bin/docker-compose down
-TimeoutStartSec=0
-
-[Install]
-WantedBy=multi-user.target
-```
-
-```bash
-# Включаем сервис
-sudo systemctl enable perfume-bot.service
-sudo systemctl start perfume-bot.service
-
-# Проверяем статус
-sudo systemctl status perfume-bot.service
+# Или через docker exec
+docker exec perfume-bot-v2 python run_perfume_bot.py update
 ```
 
 ### Резервное копирование
 
 ```bash
-#!/bin/bash
-# backup.sh
+# Создание бэкапа данных
+docker run --rm -v $(pwd)/perfume_bot/data:/data -v $(pwd)/backup:/backup \
+  alpine tar czf /backup/perfume-data-$(date +%Y%m%d_%H%M%S).tar.gz -C /data .
 
-BACKUP_DIR="/backup/perfume-bot"
-DATE=$(date +%Y%m%d_%H%M%S)
+# Восстановление из бэкапа
+docker run --rm -v $(pwd)/perfume_bot/data:/data -v $(pwd)/backup:/backup \
+  alpine tar xzf /backup/perfume-data-YYYYMMDD_HHMMSS.tar.gz -C /data
+```
 
-mkdir -p $BACKUP_DIR
+### Очистка кэша
 
-# Создаем архив
-tar -czf $BACKUP_DIR/perfume-bot-$DATE.tar.gz \
-  --exclude=logs \
-  --exclude=.git \
-  .
+```bash
+# Очистка кэша через API
+docker exec perfume-bot-v2 python -c "
+from perfume_bot.core.application import app
+import asyncio
+asyncio.run(app.clear_cache())
+"
+```
 
-# Сохраняем только последние 7 резервных копий
-find $BACKUP_DIR -name "perfume-bot-*.tar.gz" -mtime +7 -delete
+## 📊 Мониторинг
 
-echo "Backup created: $BACKUP_DIR/perfume-bot-$DATE.tar.gz"
+### Healthcheck
+
+Docker автоматически проверяет здоровье контейнера:
+
+```bash
+# Проверка статуса здоровья
+docker inspect perfume-bot-v2 | jq '.[0].State.Health'
+```
+
+### Логи
+
+```bash
+# Логи основного приложения
+docker logs -f perfume-bot-v2
+
+# Логи всех сервисов
+docker-compose -f docker-compose.v2.yml logs -f
+
+# Логи конкретного сервиса
+docker-compose -f docker-compose.v2.yml logs -f redis
+```
+
+### Метрики (с профилем monitoring)
+
+После запуска с профилем `monitoring`:
+
+- **Grafana**: http://localhost:3000 (admin/admin)
+- **Prometheus**: http://localhost:9090
+
+## 🔍 Отладка
+
+### Подключение к контейнеру
+
+```bash
+# Через скрипт управления
+./docker/docker-control.sh shell
+
+# Напрямую
+docker exec -it perfume-bot-v2 /bin/bash
+```
+
+### Проверка конфигурации
+
+```bash
+# Проверка переменных окружения
+docker exec perfume-bot-v2 env | grep -E "(BOT_TOKEN|OPENROUTER|ADMIN)"
+
+# Проверка конфигурации Python
+docker exec perfume-bot-v2 python -c "
+from perfume_bot.core.config import config
+print('✅ Конфигурация загружена успешно')
+print(f'Модель: {config.api.model}')
+print(f'Админ ID: {config.bot.admin_user_id}')
+"
+```
+
+### Тестирование API
+
+```bash
+# Тест OpenRouter API
+docker exec perfume-bot-v2 python -c "
+import asyncio
+from perfume_bot.api.openrouter_client import OpenRouterClient
+from perfume_bot.core.config import config
+
+async def test():
+    client = OpenRouterClient(config.api.api_key, model=config.api.model)
+    result = await client.check_api_key()
+    print('✅ API работает' if result.success else f'❌ API ошибка: {result.error}')
+
+asyncio.run(test())
+"
+```
+
+## 🚨 Устранение неполадок
+
+### Проблема: Контейнер не запускается
+
+```bash
+# Проверьте логи
+docker logs perfume-bot-v2
+
+# Проверьте переменные окружения
+cat .env
+
+# Пересоберите образ
+./docker/docker-control.sh build
+```
+
+### Проблема: API не работает
+
+```bash
+# Проверьте ключи API
+docker exec perfume-bot-v2 python -c "
+from perfume_bot.core.config import config
+print(f'API Key: {config.api.api_key[:20]}...')
+print(f'Model: {config.api.model}')
+"
+
+# Тест подключения
+docker exec perfume-bot-v2 curl -s https://openrouter.ai/api/v1/auth/key \
+  -H "Authorization: Bearer $OPENROUTER_API_KEY"
+```
+
+### Проблема: Нет данных
+
+```bash
+# Принудительное обновление
+docker exec perfume-bot-v2 python run_perfume_bot.py update
+
+# Проверка наличия файлов данных
+docker exec perfume-bot-v2 ls -la /app/perfume_bot/data/processed/
+```
+
+## 🔒 Безопасность
+
+### Рекомендации
+
+1. **Переменные окружения**: Никогда не коммитьте `.env` файл с реальными токенами
+2. **Пользователь**: Контейнер запускается от непривилегированного пользователя `perfume`
+3. **Сеть**: Используется изолированная Docker сеть
+4. **Ресурсы**: Установлены ограничения на память и CPU
+
+### Обновление токенов
+
+```bash
+# Остановите сервисы
+./docker/docker-control.sh stop
+
+# Обновите .env файл
+nano .env
+
+# Перезапустите
+./docker/docker-control.sh start
 ```
 
 ## 📈 Масштабирование
 
 ### Горизонтальное масштабирование
 
-Для высокой нагрузки можно запустить несколько экземпляров:
+```bash
+# Запуск нескольких экземпляров бота
+docker-compose -f docker-compose.v2.yml up -d --scale perfume-bot=3
+```
+
+### Вертикальное масштабирование
+
+Отредактируйте `docker-compose.v2.yml`:
 
 ```yaml
-# docker-compose.scale.yml
-version: '3.8'
-services:
-  perfume-bot:
-    build: .
-    deploy:
-      replicas: 3
-    # ... остальная конфигурация
+deploy:
+  resources:
+    limits:
+      memory: 2G      # Увеличьте лимит памяти
+      cpus: '1.0'     # Увеличьте лимит CPU
 ```
+
+## 🔄 Обновление
+
+### Обновление до новой версии
 
 ```bash
-docker-compose -f docker-compose.yml -f docker-compose.scale.yml up -d --scale perfume-bot=3
+# Остановите сервисы
+./docker/docker-control.sh stop
+
+# Получите обновления
+git pull
+
+# Пересоберите образы
+./docker/docker-control.sh build
+
+# Запустите с новой версией
+./docker/docker-control.sh start
 ```
 
-### Мониторинг ресурсов
+## 📝 Примеры использования
+
+### Разработка
 
 ```bash
-# Использование ресурсов
-docker stats perfume-consultant-bot
-
-# Размер образов
-docker images | grep perfume
-
-# Использование места
-docker system df
+# Запуск для разработки с монтированием кода
+docker-compose -f docker-compose.v2.yml -f docker-compose.dev.yml up
 ```
+
+### Продакшн
+
+```bash
+# Полная конфигурация для продакшна
+./docker/docker-control.sh start full
+```
+
+### Тестирование
+
+```bash
+# Запуск только для тестирования
+docker run --rm -it --env-file .env perfume-bot:latest python run_perfume_bot.py status
+```
+
+---
 
 ## 🆘 Поддержка
 
 При возникновении проблем:
 
-1. Проверьте логи: `./scripts/logs.sh`
-2. Проверьте статус: `docker-compose ps`
-3. Перезапустите: `./scripts/update.sh`
-4. Создайте issue в GitHub с логами
+1. Проверьте логи: `./docker/docker-control.sh logs`
+2. Проверьте статус: `./docker/docker-control.sh status`
+3. Проверьте конфигурацию: `cat .env`
+4. Пересоберите образы: `./docker/docker-control.sh build`
 
----
-
-**Создано с ❤️ для простого развертывания парфюмерного консультанта**
+**Happy Dockering! 🐳**
