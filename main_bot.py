@@ -396,13 +396,10 @@ class PerfumeConsultantBot:
         
         lines = ai_response.split('\n')
         processed_lines = []
-        current_perfume_url = None
-        current_perfume_name = None
+        perfume_urls = {}  # Сохраняем все найденные URL
         
+        # Первый проход: находим все ароматы и их URL
         for line in lines:
-            processed_line = line
-            
-            # Ищем название аромата в строке
             perfume_name = None
             for pattern in patterns:
                 match = re.search(pattern, line.strip())
@@ -415,44 +412,57 @@ class PerfumeConsultantBot:
                     logger.info(f"Найдено название аромата: '{perfume_name}'")
                     break
             
-            # Если нашли название аромата, ищем для него URL и запоминаем
+            # Если нашли название аромата, ищем для него URL
             if perfume_name:
-                current_perfume_url = self._find_perfume_url(perfume_name)
-                current_perfume_name = perfume_name
-                if current_perfume_url:
-                    logger.info(f"Найден URL для '{perfume_name}': {current_perfume_url}")
+                perfume_url = self._find_perfume_url(perfume_name)
+                if perfume_url:
+                    perfume_urls[perfume_name] = perfume_url
+                    logger.info(f"Найден URL для '{perfume_name}': {perfume_url}")
                 else:
                     logger.warning(f"URL не найден для '{perfume_name}'")
+        
+        # Второй проход: обрабатываем строки и заменяем ссылки
+        current_perfume_name = None
+        for line in lines:
+            processed_line = line
             
-            # Обрабатываем строки с ссылками (различные варианты)
+            # Проверяем, есть ли в этой строке название аромата
+            for pattern in patterns:
+                match = re.search(pattern, line.strip())
+                if match:
+                    perfume_name = match.group(1).strip()
+                    perfume_name = re.sub(r'^\d+\.\s*', '', perfume_name)
+                    perfume_name = re.sub(r'\s*-\s*', ' ', perfume_name)
+                    perfume_name = re.sub(r'<[^>]+>', '', perfume_name)
+                    current_perfume_name = perfume_name
+                    break
+            
+            # Обрабатываем строки с ссылками (расширенный список)
             link_patterns = [
                 '🛒 [Ссылка на товар]',
                 '🛒 [Купить товар]',
                 '🛒 [Заказать]',
+                '🛒 [Поиск в магазинах]',  # Добавлен новый паттерн
                 '🛒 Ссылка на товар',
                 '[Ссылка на товар]'
             ]
             
+            # Заменяем ссылки на рабочие URL
             for link_pattern in link_patterns:
                 if link_pattern in processed_line:
-                    if current_perfume_url:
+                    if current_perfume_name and current_perfume_name in perfume_urls:
+                        url = perfume_urls[current_perfume_name]
                         processed_line = processed_line.replace(
                             link_pattern, 
-                            f'🛒 [Купить товар]({current_perfume_url})'
+                            f'🛒 [Купить товар]({url})'
                         )
-                        logger.info(f"Заменена ссылка для '{current_perfume_name}'")
-                        current_perfume_url = None  # Сбрасываем после использования
-                        current_perfume_name = None
+                        logger.info(f"Заменена ссылка для '{current_perfume_name}': {url}")
                     else:
                         processed_line = processed_line.replace(link_pattern, '')
-                        logger.warning(f"Удалена ссылка без URL")
+                        logger.warning(f"Удалена ссылка без URL для '{current_perfume_name}'")
                     break
             
             processed_lines.append(processed_line)
-        
-        # Если остались аромат и URL, добавляем ссылку в конец
-        if current_perfume_url and current_perfume_name:
-            processed_lines.append(f'🛒 [Купить {current_perfume_name}]({current_perfume_url})')
         
         # Применяем форматирование для лучшей читаемости
         formatted_response = self._format_text_for_telegram('\n'.join(processed_lines))
@@ -1039,9 +1049,11 @@ class PerfumeConsultantBot:
         
         elif data.startswith("quiz_"):
             # Обработка ответов квиза
-            parts = data.split("_", 2)
-            if len(parts) >= 3:
-                key = parts[1]
+            # Разбираем callback: quiz_key_index (где key может содержать подчеркивания)
+            # Находим последнее подчеркивание (это разделитель перед индексом)
+            last_underscore = data.rfind("_")
+            if last_underscore > 5:  # Проверяем что есть место для "quiz_" + key
+                key = data[5:last_underscore]  # Извлекаем key (пропускаем "quiz_")
                 # Получаем полный текст ответа из маппинга
                 full_answer = user_session.callback_mapping.get(data)
                 if full_answer:
