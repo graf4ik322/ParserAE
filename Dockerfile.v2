@@ -1,0 +1,72 @@
+# Используем официальный Python образ
+FROM python:3.11-slim
+
+# Устанавливаем метаданные
+LABEL maintainer="Perfume Bot Team"
+LABEL version="2.0.0"
+LABEL description="Perfume Consultant Bot v2.0 - Unified System"
+
+# Устанавливаем системные зависимости
+RUN apt-get update && apt-get install -y \
+    curl \
+    wget \
+    git \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# Создаем пользователя для приложения (безопасность)
+RUN groupadd -r perfume && useradd -r -g perfume perfume
+
+# Устанавливаем рабочую директорию
+WORKDIR /app
+
+# Копируем файлы зависимостей
+COPY requirements.txt .
+COPY bot_requirements.txt .
+
+# Устанавливаем Python зависимости
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt && \
+    pip install --no-cache-dir -r bot_requirements.txt
+
+# Копируем код приложения
+COPY perfume_bot/ ./perfume_bot/
+COPY run_perfume_bot.py .
+COPY .env.example .env
+
+# Создаем необходимые директории
+RUN mkdir -p \
+    /app/perfume_bot/data/raw \
+    /app/perfume_bot/data/processed \
+    /app/perfume_bot/data/cache \
+    /app/logs \
+    /app/monitoring
+
+# Устанавливаем права доступа
+RUN chown -R perfume:perfume /app && \
+    chmod +x run_perfume_bot.py
+
+# Создаем entrypoint скрипт
+COPY docker/entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh && chown perfume:perfume /entrypoint.sh
+
+# Переключаемся на пользователя приложения
+USER perfume
+
+# Устанавливаем переменные окружения
+ENV PYTHONPATH=/app
+ENV PYTHONUNBUFFERED=1
+ENV ENVIRONMENT=production
+
+# Открываем порты
+EXPOSE 8080
+
+# Healthcheck
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD python -c "from perfume_bot.core.config import config; print('OK')" || exit 1
+
+# Точка входа
+ENTRYPOINT ["/entrypoint.sh"]
+
+# Команда по умолчанию
+CMD ["python", "run_perfume_bot.py"]

@@ -1,6 +1,32 @@
+# Perfume Consultant Bot v2.0 - Bot Dependencies
+# ================================================
+
+# Telegram Bot
 python-telegram-bot==20.7
+
+# HTTP клиент для API
 aiohttp==3.9.1
-python-dotenv==1.0.0
+
+# Планировщик задач
 schedule==1.2.0
+
+# Переменные окружения
+python-dotenv==1.0.0
+
+# Парсинг HTML
 beautifulsoup4==4.12.2
+
+# HTTP запросы (для совместимости)
 requests==2.31.0
+
+# Работа с датами
+python-dateutil==2.8.2
+
+# JSON обработка (встроен в Python, но для ясности)
+# json - встроенный модуль
+
+# Асинхронные задачи
+asyncio-mqtt==0.16.1
+
+# Дополнительные утилиты
+typing-extensions==4.8.0

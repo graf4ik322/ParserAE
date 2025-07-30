@@ -555,7 +555,7 @@ class PerfumeConsultantBot:
             self.user_sessions[user_id] = session
         return self.user_sessions[user_id]
     
-    async def send_main_menu(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    async def send_main_menu(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """Отправляет главное меню"""
         user_id = update.effective_user.id
         is_admin = self._is_admin(user_id)
@@ -654,38 +654,63 @@ class PerfumeConsultantBot:
         user_question = update.message.text
         user_id = update.effective_user.id
         
+        logger.info(f"🤔 Получен вопрос от пользователя {user_id}: '{user_question[:50]}...'")
+        
         # Отправляем сообщение о обработке
         processing_msg = await update.message.reply_text("🤖 Анализирую ваш вопрос и подбираю идеальные ароматы...")
         
         try:
-            # Получаем данные для промпта с артикулами
+            # Шаг 1: Получаем данные для промпта
+            logger.info("📋 Шаг 1: Получение данных для промпта...")
             name_factory_list = self._create_enhanced_perfume_list()
             factory_analysis = self.normalized_data.get('factory_analysis', {})
             
-            # Создаем промпт с помощью нашего модуля
+            if not name_factory_list:
+                logger.error("❌ Не удалось получить список парфюмов")
+                raise Exception("Не удалось загрузить базу данных ароматов")
+            
+            logger.info(f"✅ Данные получены: {len(name_factory_list)} ароматов, {len(factory_analysis)} фабрик")
+            
+            # Шаг 2: Создаем промпт
+            logger.info("🔧 Шаг 2: Создание промпта...")
             prompt = AIPrompts.create_perfume_question_prompt(
                 user_question=user_question,
-                perfume_list=name_factory_list,
+                perfume_list=name_factory_list[:200],  # Ограничиваем для стабильности
                 factory_analysis=factory_analysis,
                 limit_perfumes=LLM_LIMITS['question_list_limit'],
                 limit_factories=LLM_LIMITS['factory_summary_limit']
             )
+            logger.info(f"✅ Промпт создан, длина: {len(prompt)} символов")
             
-            # Отправляем запрос к OpenRouter
+            # Шаг 3: Отправляем запрос к OpenRouter
+            logger.info("🌐 Шаг 3: Отправка запроса к OpenRouter API...")
             ai_response = await self._call_openrouter_api(
                 prompt, 
                 max_tokens=PromptLimits.MAX_TOKENS_QUESTION,
                 temperature=PromptLimits.TEMP_BALANCED,
                 user_id=update.effective_user.id
             )
+            logger.info(f"✅ API ответ получен, длина: {len(ai_response)} символов")
             
-            # Обрабатываем ответ и добавляем ссылки
-            processed_response = self._process_ai_response_with_urls(ai_response)
+            # Шаг 4: Обрабатываем ответ
+            logger.info("🔧 Шаг 4: Обработка ответа...")
+            try:
+                processed_response = self._process_ai_response_with_urls(ai_response)
+                logger.info("✅ Ответ обработан и ссылки добавлены")
+            except Exception as e:
+                logger.error(f"❌ Ошибка обработки ответа: {e}")
+                # Используем оригинальный ответ без обработки ссылок
+                processed_response = self._format_text_for_telegram(ai_response)
+                logger.info("⚠️ Используется ответ без обработки ссылок")
             
-            # Удаляем сообщение о обработке
-            await processing_msg.delete()
+            # Шаг 5: Удаляем сообщение о обработке
+            try:
+                await processing_msg.delete()
+            except Exception as e:
+                logger.warning(f"⚠️ Не удалось удалить сообщение о обработке: {e}")
             
-            # Отправляем ответ
+            # Шаг 6: Отправляем ответ
+            logger.info("📤 Шаг 6: Отправка ответа пользователю...")
             keyboard = [
                 [InlineKeyboardButton("❓ Задать еще вопрос", callback_data="perfume_question")],
                 [InlineKeyboardButton("🎯 Пройти квиз", callback_data="perfume_quiz")],
@@ -714,12 +739,19 @@ class PerfumeConsultantBot:
                     parse_mode='HTML'
                 )
             
-        except Exception as e:
-            await processing_msg.delete()
-            logger.error(f"❌ Ошибка при поиске информации: {str(e)}")
+            logger.info("✅ Ответ успешно отправлен пользователю")
             
-            # НЕ делаем повторный API запрос при ошибке - это экономит токены и предотвращает каскадные ошибки
-            if "rate-limited" in str(e) or "429" in str(e):
+        except Exception as e:
+            logger.error(f"❌ Критическая ошибка в process_perfume_question: {str(e)}")
+            
+            # Удаляем сообщение о обработке
+            try:
+                await processing_msg.delete()
+            except:
+                pass
+            
+            # Определяем тип ошибки и отправляем соответствующее сообщение
+            if "rate-limited" in str(e).lower() or "429" in str(e):
                 error_text = (
                     "⏱️ Слишком много запросов. Пожалуйста, подождите несколько секунд и попробуйте снова.\n\n"
                     "💡 Попробуйте:\n"
@@ -727,13 +759,21 @@ class PerfumeConsultantBot:
                     "• Пройти квиз для подбора ароматов\n"
                     "• Вернуться в главное меню"
                 )
-            elif "500" in str(e):
+            elif "500" in str(e) or "server" in str(e).lower():
                 error_text = (
                     "🔧 Временные технические проблемы на сервере.\n\n"
                     "💡 Попробуйте:\n"
                     "• Повторить запрос через минуту\n"
                     "• Пройти квиз для подбора ароматов\n"
                     "• Вернуться в главное меню"
+                )
+            elif "api" in str(e).lower() or "ключ" in str(e).lower():
+                error_text = (
+                    "🔑 Проблема с API сервисом.\n\n"
+                    "💡 Попробуйте:\n"
+                    "• Повторить запрос через несколько минут\n"
+                    "• Пройти квиз для подбора ароматов\n"
+                    "• Обратиться к администратору"
                 )
             else:
                 error_text = (
@@ -954,23 +994,36 @@ class PerfumeConsultantBot:
     async def process_fragrance_info(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         """Обрабатывает запрос информации об аромате"""
         fragrance_query = update.message.text
+        user_id = update.effective_user.id
+        
+        logger.info(f"🔍 Получен запрос информации от пользователя {user_id}: '{fragrance_query[:50]}...'")
         
         processing_msg = await update.message.reply_text("🔍 Ищу подробную информацию об аромате...")
         
         try:
-            # Создаем промпт для получения информации об аромате
+            # Шаг 1: Создаем промпт
+            logger.info("🔧 Шаг 1: Создание промпта для информации об аромате...")
             prompt = AIPrompts.create_fragrance_info_prompt(fragrance_query)
+            logger.info(f"✅ Промпт создан, длина: {len(prompt)} символов")
             
-            # Получаем ответ от ИИ
+            # Шаг 2: Получаем ответ от ИИ
+            logger.info("🌐 Шаг 2: Отправка запроса к OpenRouter API...")
             ai_response = await self._call_openrouter_api(
                 prompt, 
                 max_tokens=PromptLimits.MAX_TOKENS_INFO,
                 temperature=PromptLimits.TEMP_FACTUAL,
                 user_id=update.effective_user.id
             )
+            logger.info(f"✅ API ответ получен, длина: {len(ai_response)} символов")
             
-            await processing_msg.delete()
+            # Шаг 3: Удаляем сообщение о обработке
+            try:
+                await processing_msg.delete()
+            except Exception as e:
+                logger.warning(f"⚠️ Не удалось удалить сообщение о обработке: {e}")
             
+            # Шаг 4: Форматируем и отправляем ответ
+            logger.info("📤 Шаг 4: Форматирование и отправка ответа...")
             keyboard = [
                 [InlineKeyboardButton("🔍 Найти еще аромат", callback_data="fragrance_info")],
                 [InlineKeyboardButton("🎯 Пройти квиз", callback_data="perfume_quiz")],
@@ -1001,10 +1054,53 @@ class PerfumeConsultantBot:
                     parse_mode='HTML'
                 )
             
+            logger.info("✅ Информация об аромате успешно отправлена пользователю")
+            
         except Exception as e:
-            await processing_msg.delete()
+            logger.error(f"❌ Критическая ошибка в process_fragrance_info: {str(e)}")
+            
+            # Удаляем сообщение о обработке
+            try:
+                await processing_msg.delete()
+            except:
+                pass
+            
+            # Определяем тип ошибки и отправляем соответствующее сообщение
+            if "rate-limited" in str(e).lower() or "429" in str(e):
+                error_text = (
+                    "⏱️ Слишком много запросов. Пожалуйста, подождите несколько секунд и попробуйте снова.\n\n"
+                    "💡 Попробуйте:\n"
+                    "• Подождать 30-60 секунд\n"
+                    "• Пройти квиз для подбора ароматов\n"
+                    "• Вернуться в главное меню"
+                )
+            elif "500" in str(e) or "server" in str(e).lower():
+                error_text = (
+                    "🔧 Временные технические проблемы на сервере.\n\n"
+                    "💡 Попробуйте:\n"
+                    "• Повторить запрос через минуту\n"
+                    "• Пройти квиз для подбора ароматов\n"
+                    "• Вернуться в главное меню"
+                )
+            elif "api" in str(e).lower() or "ключ" in str(e).lower():
+                error_text = (
+                    "🔑 Проблема с API сервисом.\n\n"
+                    "💡 Попробуйте:\n"
+                    "• Повторить запрос через несколько минут\n"
+                    "• Пройти квиз для подбора ароматов\n"
+                    "• Обратиться к администратору"
+                )
+            else:
+                error_text = (
+                    "❌ Извините, произошла техническая ошибка при поиске информации об аромате.\n\n"
+                    "💡 Попробуйте:\n"
+                    "• Переформулировать запрос\n"
+                    "• Пройти квиз для подбора ароматов\n"
+                    "• Вернуться в главное меню"
+                )
+            
             await update.message.reply_text(
-                f"❌ Ошибка при поиске информации: {str(e)}\n\nПопробуйте еще раз или вернитесь в главное меню.",
+                text=error_text,
                 reply_markup=InlineKeyboardMarkup([[
                     InlineKeyboardButton("🔙 Главное меню", callback_data="main_menu")
                 ]]),
@@ -1375,29 +1471,11 @@ class PerfumeConsultantBot:
         """Создает приложение Telegram бота"""
         application = Application.builder().token(self.bot_token).build()
         
-        # Conversation handler для управления состояниями
-        conv_handler = ConversationHandler(
-            entry_points=[CommandHandler("start", self.send_main_menu)],
-            states={
-                BotState.MAIN_MENU.value: [
-                    CallbackQueryHandler(self.handle_callback_query)
-                ],
-                BotState.WAITING_USER_INPUT.value: [
-                    MessageHandler(filters.TEXT & ~filters.COMMAND, self.process_user_input),
-                    CallbackQueryHandler(self.handle_callback_query)
-                ],
-                BotState.QUIZ_IN_PROGRESS.value: [
-                    CallbackQueryHandler(self.handle_callback_query)
-                ],
-            },
-            fallbacks=[
-                CommandHandler("start", self.send_main_menu),
-                CallbackQueryHandler(self.handle_callback_query)
-            ],
-            per_message=False,
-        )
+        # Добавляем обработчики напрямую без ConversationHandler для упрощения
+        application.add_handler(CommandHandler("start", self.send_main_menu))
+        application.add_handler(CallbackQueryHandler(self.handle_callback_query))
+        application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, self.process_user_input))
         
-        application.add_handler(conv_handler)
         return application
     
     async def process_user_input(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
