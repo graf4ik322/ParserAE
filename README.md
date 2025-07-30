@@ -32,7 +32,7 @@ pip install -r requirements.txt
 
 Запустите основной парсер:
 ```bash
-python aroma_euro_parser.py
+python aroma_euro_final.py
 ```
 
 Этот скрипт:
@@ -40,13 +40,6 @@ python aroma_euro_parser.py
 - Извлечет информацию о всех парфюмах
 - Сохранит данные в файл `aroma_euro_perfumes.json`
 - Выведет подробную статистику
-
-### Универсальный парсер
-
-Также доступен универсальный парсер, который может работать с различными сайтами:
-```bash
-python perfume_parser.py
-```
 
 ## Структура выходных данных
 
