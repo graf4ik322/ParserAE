@@ -7,11 +7,12 @@ from enum import Enum
 
 class QuizCategory(Enum):
     """Категории вопросов квиза"""
-    BASIC_PROFILE = "basic_profile"
-    PSYCHOLOGICAL_TYPE = "psychological_type"
+    TARGET_SELECTION = "target_selection"
     SCENT_PREFERENCES = "scent_preferences"
+    INTENSITY_LONGEVITY = "intensity_longevity"
     USAGE_CONTEXT = "usage_context"
     PERSONAL_STYLE = "personal_style"
+    OCCASION_MOOD = "occasion_mood"
 
 @dataclass
 class QuizQuestion:
@@ -23,300 +24,231 @@ class QuizQuestion:
     key: str
     depends_on: Optional[str] = None
 
-class PerfumeQuizSystem:
-    """Улучшенная система квиза для максимально точного подбора парфюмов"""
+class UniversalPerfumeQuizSystem:
+    """Универсальная система квиза для точного подбора парфюмов"""
     
     def __init__(self):
-        self.questions = self._create_enhanced_quiz_questions()
-        self.adaptive_questions = self._create_adaptive_questions()
-        self.question_flow = self._create_question_flow()
+        self.questions = self._create_universal_quiz_questions()
+        self.target_based_questions = self._create_target_based_questions()
+        self.total_questions = 8  # Оптимальное количество для точного определения
     
-    def _create_enhanced_quiz_questions(self) -> List[QuizQuestion]:
-        """Создает научно обоснованные вопросы для точного профилирования"""
+    def _create_universal_quiz_questions(self) -> List[QuizQuestion]:
+        """Создает универсальные вопросы подходящие для любого пользователя"""
         return [
-            # Базовый профиль
+            # Вопрос 1: Определение целевой группы
             QuizQuestion(
-                id="target_person",
-                category=QuizCategory.BASIC_PROFILE,
+                id="target_group",
+                category=QuizCategory.TARGET_SELECTION,
                 text="👤 Для кого подбираем аромат?",
                 options=[
-                    "Для себя (женщина)", 
-                    "Для себя (мужчина)", 
-                    "Для партнера/партнерши",
+                    "Для себя (женские ароматы)", 
+                    "Для себя (мужские ароматы)", 
+                    "Для себя (унисекс ароматы)",
+                    "В подарок (женщине)",
+                    "В подарок (мужчине)",
                     "Универсальный подарок"
                 ],
-                key="target_person"
+                key="target_group"
             ),
             
+            # Вопрос 2: Ароматическая семья (универсальный)
             QuizQuestion(
-                id="age_personality",
-                category=QuizCategory.BASIC_PROFILE,
-                text="🎭 Как бы вы описали свой характер?",
-                options=[
-                    "Энергичный и современный", 
-                    "Элегантный и утонченный", 
-                    "Загадочный и чувственный",
-                    "Спокойный и гармоничный"
-                ],
-                key="personality_type"
-            ),
-            
-            # Психологический тип (на основе исследования Mintel)
-            QuizQuestion(
-                id="fragrance_motivation",
-                category=QuizCategory.PSYCHOLOGICAL_TYPE,
-                text="🧠 Что для вас главное в аромате?",
-                options=[
-                    "Расслабление и эмоциональное благополучие",
-                    "Безопасность и натуральность",
-                    "Уникальность и приключения",
-                    "Уверенность и привлекательность"
-                ],
-                key="consumer_type"
-            ),
-            
-            QuizQuestion(
-                id="scent_discovery",
-                category=QuizCategory.PSYCHOLOGICAL_TYPE,
-                text="🌟 Как вы относитесь к новым ароматам?",
-                options=[
-                    "Обожаю экспериментировать с новинками",
-                    "Предпочитаю проверенную классику",
-                    "Выбираю по настроению",
-                    "Доверяю рекомендациям экспертов"
-                ],
-                key="innovation_attitude"
-            ),
-            
-            # Предпочтения по ароматам (улучшенная версия)
-            QuizQuestion(
-                id="scent_family_detailed",
+                id="scent_family",
                 category=QuizCategory.SCENT_PREFERENCES,
-                text="🌺 Какие ароматы вызывают у вас приятные ассоциации?",
+                text="🌺 Какие ароматы больше всего нравятся?",
                 options=[
-                    "Цветочная свежесть",
-                    "Теплые уютные ноты",
-                    "Цитрусовая энергия",
-                    "Благородное дерево",
-                    "Экзотические пряности",
-                    "Морская свежесть"
+                    "Свежие и легкие (цитрус, морской бриз)",
+                    "Цветочные и нежные (роза, жасмин, пион)",
+                    "Древесные и теплые (сандал, кедр, ветивер)",
+                    "Пряные и экзотические (корица, кардамон, перец)",
+                    "Сладкие и уютные (ваниль, карамель, мед)",
+                    "Свежие травяные (лаванда, мята, базилик)"
                 ],
                 key="scent_family"
             ),
             
+            # Вопрос 3: Интенсивность и характер
             QuizQuestion(
-                id="scent_intensity",
-                category=QuizCategory.SCENT_PREFERENCES,
-                text="💨 Какой должна быть интенсивность аромата?",
+                id="intensity_character",
+                category=QuizCategory.INTENSITY_LONGEVITY,
+                text="💨 Какой характер аромата предпочтительнее?",
                 options=[
-                    "Деликатная - только для меня",
-                    "Умеренная - приятный шлейф",
-                    "Заметная - чтобы запомнились",
-                    "Интенсивная - яркое заявление"
+                    "Деликатный и ненавязчивый",
+                    "Умеренный с приятным шлейфом",
+                    "Яркий и запоминающийся",
+                    "Интенсивный и долгоиграющий"
                 ],
-                key="intensity_preference"
+                key="intensity_character"
             ),
             
-            QuizQuestion(
-                id="longevity_importance",
-                category=QuizCategory.SCENT_PREFERENCES,
-                text="⏰ Насколько важна стойкость аромата?",
-                options=[
-                    "Критично важна (8+ часов)",
-                    "Важна (4-6 часов)",
-                    "Умеренно важна (2-4 часа)",
-                    "Не принципиально"
-                ],
-                key="longevity_need"
-            ),
-            
-            # Контекст использования (оптимизированный)
+            # Вопрос 4: Основное использование
             QuizQuestion(
                 id="primary_usage",
                 category=QuizCategory.USAGE_CONTEXT,
-                text="🎯 В каких ситуациях будете использовать аромат чаще всего?",
+                text="🎯 В каких ситуациях чаще всего будет использоваться?",
                 options=[
-                    "Ежедневно на работе",
-                    "Особые случаи",
-                    "Свидания",
-                    "Дома для себя",
-                    "Спорт и отдых"
+                    "Ежедневно (работа, учеба, повседневные дела)",
+                    "Особые случаи (свидания, торжества, встречи)",
+                    "Вечерние выходы (театр, рестораны, мероприятия)",
+                    "Дома для себя (релакс, уют, личное время)",
+                    "Активный отдых (спорт, прогулки, путешествия)"
                 ],
-                key="usage_context"
+                key="primary_usage"
             ),
             
+            # Вопрос 5: Сезонность
             QuizQuestion(
                 id="seasonal_preference",
                 category=QuizCategory.USAGE_CONTEXT,
-                text="🌡️ Когда планируете использовать аромат?",
+                text="🌡️ Когда планируется использовать аромат?",
                 options=[
-                    "Круглый год",
-                    "Весна-лето",
-                    "Осень-зима",
-                    "По настроению"
+                    "Круглый год (универсальный)",
+                    "Весна-лето (легкие, освежающие)",
+                    "Осень-зима (теплые, уютные)",
+                    "По настроению (разные ароматы для разных дней)"
                 ],
-                key="seasonal_usage"
+                key="seasonal_preference"
             ),
             
-            # Личный стиль
+            # Вопрос 6: Стиль и имидж
             QuizQuestion(
-                id="style_association",
+                id="style_image",
                 category=QuizCategory.PERSONAL_STYLE,
-                text="👗 Ваш стиль в одежде ближе к:",
+                text="✨ Какой образ хочется создать с помощью аромата?",
                 options=[
-                    "Классический и элегантный",
-                    "Современный и минималистичный",
-                    "Яркий и творческий",
-                    "Удобный и практичный",
-                    "Романтичный и женственный"
+                    "Элегантный и утонченный",
+                    "Современный и стильный",
+                    "Загадочный и чувственный",
+                    "Энергичный и жизнерадостный",
+                    "Спокойный и гармоничный",
+                    "Уникальный и креативный"
                 ],
-                key="style_preference"
+                key="style_image"
             ),
             
+            # Вопрос 7: Настроение и эмоции
             QuizQuestion(
-                id="social_impact",
-                category=QuizCategory.PERSONAL_STYLE,
-                text="👥 Как аромат должен влиять на окружающих?",
+                id="mood_emotion",
+                category=QuizCategory.OCCASION_MOOD,
+                text="🎭 Какие эмоции должен вызывать аромат?",
                 options=[
-                    "Создавать атмосферу уюта и доверия",
-                    "Подчеркивать мою индивидуальность",
-                    "Привлекать внимание и интерес",
-                    "Оставаться незаметным для других"
+                    "Уверенность и силу",
+                    "Спокойствие и умиротворение",
+                    "Радость и позитив",
+                    "Романтичность и нежность",
+                    "Энергию и бодрость",
+                    "Загадочность и притягательность"
                 ],
-                key="social_impact"
+                key="mood_emotion"
             ),
             
+            # Вопрос 8: Приоритеты при выборе
             QuizQuestion(
-                id="quality_priority",
+                id="selection_priority",
                 category=QuizCategory.PERSONAL_STYLE,
-                text="⭐ Что для вас приоритетнее?",
+                text="⭐ Что важнее всего при выборе аромата?",
                 options=[
-                    "Уникальность и редкость аромата",
-                    "Качество исполнения и стойкость",
+                    "Уникальность и оригинальность",
+                    "Стойкость и долговечность",
                     "Натуральность ингредиентов",
+                    "Универсальность и практичность",
+                    "Соответствие модным трендам",
                     "Соотношение цена/качество"
                 ],
-                key="quality_focus"
+                key="selection_priority"
             )
         ]
     
-    def _create_question_flow(self) -> Dict[str, List[str]]:
-        """Создает логику потока вопросов"""
+    def _create_target_based_questions(self) -> Dict[str, List[QuizQuestion]]:
+        """Создает дополнительные вопросы в зависимости от целевой группы"""
         return {
-            "start": ["target_person", "age_personality"],
-            "profile_complete": ["fragrance_motivation", "scent_discovery"],
-            "psychology_complete": ["scent_family_detailed", "scent_intensity"],
-            "scent_preferences_complete": ["longevity_importance", "primary_usage"],
-            "usage_complete": ["seasonal_preference", "style_association"],
-            "style_complete": ["social_impact", "quality_priority"],
-            "end": []
-        }
-    
-    def _create_adaptive_questions(self) -> Dict[str, List[QuizQuestion]]:
-        """Создает адаптивные вопросы в зависимости от целевой аудитории"""
-        return {
-            "Для себя (женщина)": [
+            "Для себя (женские ароматы)": [
                 QuizQuestion(
-                    id="female_occasion",
-                    category=QuizCategory.USAGE_CONTEXT,
-                    text="✨ В каких случаях планируете использовать аромат?",
+                    id="feminine_occasion",
+                    category=QuizCategory.OCCASION_MOOD,
+                    text="💃 В каких случаях планируется использование?",
                     options=[
-                        "Ежедневно на работу",
+                        "Повседневная работа и деловые встречи",
                         "Романтические свидания",
-                        "Вечерние мероприятия",
-                        "Для себя дома"
+                        "Светские мероприятия и вечеринки",
+                        "Домашний уют и личное время"
                     ],
-                    key="female_occasion"
-                ),
-                QuizQuestion(
-                    id="female_style",
-                    category=QuizCategory.PERSONAL_STYLE,
-                    text="👗 Ваш стиль в образах:",
-                    options=[
-                        "Классика и элегантность",
-                        "Романтичность",
-                        "Современный минимализм",
-                        "Яркость и креативность"
-                    ],
-                    key="female_style"
+                    key="feminine_occasion"
                 )
             ],
-            "Для себя (мужчина)": [
+            
+            "Для себя (мужские ароматы)": [
                 QuizQuestion(
-                    id="male_occasion",
+                    id="masculine_occasion",
+                    category=QuizCategory.OCCASION_MOOD,
+                    text="🤵 В каких ситуациях планируется использование?",
+                    options=[
+                        "Офис и деловая среда",
+                        "Спорт и активный отдых",
+                        "Вечерние выходы и мероприятия",
+                        "Повседневная жизнь"
+                    ],
+                    key="masculine_occasion"
+                )
+            ],
+            
+            "Для себя (унисекс ароматы)": [
+                QuizQuestion(
+                    id="unisex_preference",
+                    category=QuizCategory.SCENT_PREFERENCES,
+                    text="🎯 Какой стиль ароматов предпочтительнее?",
+                    options=[
+                        "Минималистичные и чистые",
+                        "Сложные и многогранные",
+                        "Природные и натуральные",
+                        "Современные и авангардные"
+                    ],
+                    key="unisex_preference"
+                )
+            ],
+            
+            "В подарок (женщине)": [
+                QuizQuestion(
+                    id="gift_woman_relationship",
                     category=QuizCategory.USAGE_CONTEXT,
-                    text="🎯 Где будете использовать аромат?",
+                    text="💕 Кому предназначен подарок?",
                     options=[
-                        "Офис и деловые встречи",
-                        "Спорт и активный отдых", 
-                        "Вечерние выходы",
-                        "Повседневно"
+                        "Партнерше/жене",
+                        "Маме/сестре/родственнице",
+                        "Подруге/коллеге",
+                        "Знакомой (формальный подарок)"
                     ],
-                    key="male_occasion"
-                ),
-                QuizQuestion(
-                    id="male_character",
-                    category=QuizCategory.PERSONAL_STYLE,
-                    text="💪 Как бы вас описали друзья?",
-                    options=[
-                        "Уверенный лидер",
-                        "Надежный друг",
-                        "Творческая личность",
-                        "Спокойный и мудрый"
-                    ],
-                    key="male_character"
+                    key="gift_woman_relationship"
                 )
             ],
-            "Для партнера/партнерши": [
+            
+            "В подарок (мужчине)": [
                 QuizQuestion(
-                    id="partner_type",
-                    category=QuizCategory.BASIC_PROFILE,
-                    text="💕 Ваш партнер:",
+                    id="gift_man_relationship",
+                    category=QuizCategory.USAGE_CONTEXT,
+                    text="🎁 Кому предназначен подарок?",
                     options=[
-                        "Женщина, любит элегантность",
-                        "Женщина, предпочитает естественность",
-                        "Мужчина, деловой стиль",
-                        "Мужчина, спортивный тип"
+                        "Партнеру/мужу",
+                        "Папе/брату/родственнику",
+                        "Другу/коллеге",
+                        "Знакомому (формальный подарок)"
                     ],
-                    key="partner_type"
-                ),
-                QuizQuestion(
-                    id="relationship_stage",
-                    category=QuizCategory.PSYCHOLOGICAL_TYPE,
-                    text="💖 Какой этап отношений?",
-                    options=[
-                        "Начало отношений",
-                        "Устоявшиеся отношения",
-                        "Особый повод/годовщина",
-                        "Просто приятный сюрприз"
-                    ],
-                    key="relationship_stage"
+                    key="gift_man_relationship"
                 )
             ],
+            
             "Универсальный подарок": [
                 QuizQuestion(
-                    id="gift_recipient",
-                    category=QuizCategory.BASIC_PROFILE,
-                    text="🎁 Для кого подарок?",
+                    id="universal_gift_type",
+                    category=QuizCategory.USAGE_CONTEXT,
+                    text="🎪 Какой тип подарка предпочтительнее?",
                     options=[
-                        "Коллега/деловой партнер",
-                        "Друг/подруга",
-                        "Родственник",
-                        "Неизвестно/универсально"
+                        "Нейтральный и безопасный выбор",
+                        "Качественный и престижный",
+                        "Оригинальный и запоминающийся",
+                        "Практичный и универсальный"
                     ],
-                    key="gift_recipient"
-                ),
-                QuizQuestion(
-                    id="gift_budget",
-                    category=QuizCategory.PSYCHOLOGICAL_TYPE,
-                    text="💰 Каким видите подарок?",
-                    options=[
-                        "Скромный знак внимания",
-                        "Качественный подарок",
-                        "Роскошный сюрприз",
-                        "Практичный выбор"
-                    ],
-                    key="gift_budget"
+                    key="universal_gift_type"
                 )
             ]
         }
@@ -325,152 +257,229 @@ class PerfumeQuizSystem:
                          current_step: int) -> Optional[QuizQuestion]:
         """Получает следующий вопрос на основе текущих ответов"""
         
-        # Логика: 
-        # Шаг 0: target_person (базовый вопрос 0)
-        # Шаг 1: первый адаптивный вопрос
-        # Шаг 2: второй адаптивный вопрос  
-        # Шаг 3+: остальные базовые вопросы (начиная с индекса 1)
+        # Основные вопросы (0-7)
+        if current_step < len(self.questions):
+            return self.questions[current_step]
         
-        # Первый вопрос всегда базовый
-        if current_step == 0:
-            return self.questions[0]
-        
-        # Адаптивные вопросы на шагах 1 и 2
-        if current_step in [1, 2] and "target_person" in current_answers:
-            target = current_answers["target_person"]
-            if target in self.adaptive_questions:
-                adaptive_questions = self.adaptive_questions[target]
-                adaptive_index = current_step - 1  # Шаг 1 -> индекс 0, шаг 2 -> индекс 1
-                if adaptive_index < len(adaptive_questions):
-                    return adaptive_questions[adaptive_index]
-        
-        # Остальные базовые вопросы (начиная с шага 3)
-        if current_step >= 3:
-            base_question_index = current_step - 2  # Шаг 3 -> индекс 1, шаг 4 -> индекс 2
-            if base_question_index < len(self.questions):
-                return self.questions[base_question_index]
+        # Дополнительный вопрос на основе целевой группы (шаг 8)
+        if current_step == 8 and "target_group" in current_answers:
+            target = current_answers["target_group"]
+            if target in self.target_based_questions:
+                additional_questions = self.target_based_questions[target]
+                if additional_questions:
+                    return additional_questions[0]
         
         return None
     
     def get_total_questions(self) -> int:
         """Возвращает общее количество вопросов"""
-        return len(self.questions) + 2  # Базовые вопросы + 2 адаптивных
+        return 9  # 8 основных + 1 дополнительный
     
     def analyze_answers(self, answers: Dict[str, str]) -> Dict[str, Any]:
         """Анализирует ответы и создает детальный профиль предпочтений"""
         profile = {
-            "basic_profile": self._analyze_basic_profile(answers),
-            "psychological_type": self._analyze_psychological_type(answers),
-            "scent_preferences": self._analyze_scent_preferences(answers),
-            "usage_context": self._analyze_usage_context(answers),
-            "personal_style": self._analyze_personal_style(answers),
-            "weighted_preferences": self._calculate_weighted_preferences(answers),
-            "consumer_archetype": self._determine_consumer_archetype(answers)
+            "target_analysis": self._analyze_target_group(answers),
+            "scent_profile": self._analyze_scent_preferences(answers),
+            "usage_profile": self._analyze_usage_context(answers),
+            "personality_profile": self._analyze_personality_traits(answers),
+            "recommendation_focus": self._determine_recommendation_focus(answers),
+            "raw_answers": answers
         }
         
         return profile
     
-    def _analyze_basic_profile(self, answers: Dict[str, str]) -> Dict[str, str]:
-        """Анализирует базовый профиль"""
+    def _analyze_target_group(self, answers: Dict[str, str]) -> Dict[str, str]:
+        """Анализирует целевую группу"""
+        target = answers.get("target_group", "")
+        
+        # Определяем основные параметры
+        if "женские" in target:
+            gender_focus = "женские"
+        elif "мужские" in target:
+            gender_focus = "мужские"
+        elif "унисекс" in target:
+            gender_focus = "унисекс"
+        else:
+            gender_focus = "универсальные"
+        
+        is_gift = "подарок" in target.lower()
+        
         return {
-            "target": answers.get("target_person", "Не указано"),
-            "personality": answers.get("personality_type", "Не указано")
-        }
-    
-    def _analyze_psychological_type(self, answers: Dict[str, str]) -> Dict[str, str]:
-        """Анализирует психологический тип потребителя"""
-        return {
-            "motivation": answers.get("consumer_type", "Не указано"),
-            "innovation_attitude": answers.get("innovation_attitude", "Не указано")
+            "target": target,
+            "gender_focus": gender_focus,
+            "is_gift": "да" if is_gift else "нет",
+            "purchase_type": "подарок" if is_gift else "для себя"
         }
     
     def _analyze_scent_preferences(self, answers: Dict[str, str]) -> Dict[str, str]:
         """Анализирует предпочтения по ароматам"""
+        family = answers.get("scent_family", "")
+        intensity = answers.get("intensity_character", "")
+        
+        # Классифицируем ароматическую семью
+        if "свежие и легкие" in family.lower():
+            family_type = "fresh"
+        elif "цветочные" in family.lower():
+            family_type = "floral"
+        elif "древесные" in family.lower():
+            family_type = "woody"
+        elif "пряные" in family.lower():
+            family_type = "spicy"
+        elif "сладкие" in family.lower():
+            family_type = "gourmand"
+        elif "травяные" in family.lower():
+            family_type = "aromatic"
+        else:
+            family_type = "mixed"
+        
+        # Определяем уровень интенсивности
+        if "деликатный" in intensity.lower():
+            intensity_level = "light"
+        elif "умеренный" in intensity.lower():
+            intensity_level = "moderate"
+        elif "яркий" in intensity.lower():
+            intensity_level = "strong"
+        elif "интенсивный" in intensity.lower():
+            intensity_level = "intense"
+        else:
+            intensity_level = "moderate"
+        
         return {
-            "family": answers.get("scent_family", "Не указано"),
-            "intensity": answers.get("intensity_preference", "Не указано"),
-            "longevity": answers.get("longevity_need", "Не указано")
+            "family": family,
+            "family_type": family_type,
+            "intensity": intensity,
+            "intensity_level": intensity_level
         }
     
     def _analyze_usage_context(self, answers: Dict[str, str]) -> Dict[str, str]:
         """Анализирует контекст использования"""
-        return {
-            "primary_usage": answers.get("usage_context", "Не указано"),
-            "seasonal": answers.get("seasonal_usage", "Не указано")
-        }
-    
-    def _analyze_personal_style(self, answers: Dict[str, str]) -> Dict[str, str]:
-        """Анализирует личный стиль"""
-        return {
-            "style": answers.get("style_preference", "Не указано"),
-            "social_impact": answers.get("social_impact", "Не указано"),
-            "quality_focus": answers.get("quality_focus", "Не указано")
-        }
-    
-    def _determine_consumer_archetype(self, answers: Dict[str, str]) -> str:
-        """Определяет архетип потребителя на основе исследований"""
-        motivation = answers.get("consumer_type", "")
+        usage = answers.get("primary_usage", "")
+        seasonal = answers.get("seasonal_preference", "")
         
-        if "расслабление" in motivation.lower():
-            return "Self-care Enthusiast"
-        elif "безопасность" in motivation.lower():
-            return "Safety Seeker"
-        elif "уникальность" in motivation.lower():
-            return "Escapist Consumer"
+        # Определяем контекст
+        if "ежедневно" in usage.lower():
+            context = "daily"
+        elif "особые случаи" in usage.lower():
+            context = "special"
+        elif "вечерние" in usage.lower():
+            context = "evening"
+        elif "дома" in usage.lower():
+            context = "home"
+        elif "активный" in usage.lower():
+            context = "sport"
         else:
-            return "Confidence Builder"
+            context = "versatile"
+        
+        # Определяем сезонность
+        if "круглый год" in seasonal.lower():
+            season = "all_year"
+        elif "весна-лето" in seasonal.lower():
+            season = "warm"
+        elif "осень-зима" in seasonal.lower():
+            season = "cold"
+        else:
+            season = "flexible"
+        
+        return {
+            "primary_usage": usage,
+            "usage_context": context,
+            "seasonal": seasonal,
+            "season_type": season
+        }
     
-    def _calculate_weighted_preferences(self, answers: Dict[str, str]) -> Dict[str, float]:
-        """Упрощенная система предпочтений без весов"""
-        # Веса больше не используются, так как рекомендации полностью делает ИИ
-        return {}
+    def _analyze_personality_traits(self, answers: Dict[str, str]) -> Dict[str, str]:
+        """Анализирует личностные характеристики"""
+        style = answers.get("style_image", "")
+        mood = answers.get("mood_emotion", "")
+        priority = answers.get("selection_priority", "")
+        
+        return {
+            "style_image": style,
+            "desired_mood": mood,
+            "selection_priority": priority
+        }
+    
+    def _determine_recommendation_focus(self, answers: Dict[str, str]) -> str:
+        """Определяет фокус для рекомендаций"""
+        target = answers.get("target_group", "")
+        family = answers.get("scent_family", "")
+        usage = answers.get("primary_usage", "")
+        
+        # Создаем фокусированный профиль для ИИ
+        focus_keywords = []
+        
+        # Добавляем гендерный фокус
+        if "женские" in target:
+            focus_keywords.append("feminine")
+        elif "мужские" in target:
+            focus_keywords.append("masculine")
+        elif "унисекс" in target:
+            focus_keywords.append("unisex")
+        
+        # Добавляем ароматический профиль
+        if "свежие" in family.lower():
+            focus_keywords.append("fresh")
+        elif "цветочные" in family.lower():
+            focus_keywords.append("floral")
+        elif "древесные" in family.lower():
+            focus_keywords.append("woody")
+        elif "сладкие" in family.lower():
+            focus_keywords.append("sweet")
+        
+        # Добавляем контекст использования
+        if "ежедневно" in usage.lower():
+            focus_keywords.append("daily_wear")
+        elif "особые" in usage.lower():
+            focus_keywords.append("special_occasions")
+        elif "вечерние" in usage.lower():
+            focus_keywords.append("evening_wear")
+        
+        return " + ".join(focus_keywords)
     
     def create_recommendation_prompt(self, profile: Dict[str, Any], 
                                    available_perfumes: List[str],
                                    factory_analysis: Dict[str, Any]) -> str:
-        """Создает улучшенный промпт для рекомендаций на основе детального профиля"""
+        """Создает улучшенный промпт для рекомендаций на основе универсального профиля"""
         
-        basic = profile.get("basic_profile", {})
-        psychology = profile.get("psychological_type", {})
-        scent_prefs = profile.get("scent_preferences", {})
-        usage = profile.get("usage_context", {})
-        style = profile.get("personal_style", {})
-        archetype = profile.get("consumer_archetype", "")
+        target = profile.get("target_analysis", {})
+        scent = profile.get("scent_profile", {})
+        usage = profile.get("usage_profile", {})
+        personality = profile.get("personality_profile", {})
+        focus = profile.get("recommendation_focus", "")
         
         prompt = f"""
-Вы - эксперт-парфюмер с 20-летним опытом. Подберите 3-4 идеальных аромата на основе детального профиля клиента:
+Вы - эксперт-парфюмер. Подберите 3-4 идеальных аромата на основе детального профиля:
 
 ПРОФИЛЬ КЛИЕНТА:
-🎭 Личность: {basic.get('personality', 'не указано')}
-🧠 Тип потребителя: {archetype}
-🌺 Ароматические предпочтения: {scent_prefs.get('family', 'не указано')}
-💨 Интенсивность: {scent_prefs.get('intensity', 'не указано')}
-⏰ Стойкость: {scent_prefs.get('longevity', 'не указано')}
-🎯 Основное использование: {usage.get('primary_usage', 'не указано')}
-👗 Стиль: {style.get('style', 'не указано')}
-👥 Социальное влияние: {style.get('social_impact', 'не указано')}
+🎯 Целевая группа: {target.get('target', 'не указано')} ({target.get('gender_focus', 'универсальные')})
+🌺 Ароматические предпочтения: {scent.get('family', 'не указано')} (тип: {scent.get('family_type', 'смешанный')})
+💨 Интенсивность: {scent.get('intensity', 'не указано')} (уровень: {scent.get('intensity_level', 'умеренный')})
+🎯 Использование: {usage.get('primary_usage', 'не указано')} (контекст: {usage.get('usage_context', 'универсальный')})
+🌡️ Сезонность: {usage.get('seasonal', 'не указано')} (тип: {usage.get('season_type', 'гибкий')})
+✨ Желаемый образ: {personality.get('style_image', 'не указано')}
+🎭 Настроение: {personality.get('desired_mood', 'не указано')}
+⭐ Приоритет: {personality.get('selection_priority', 'не указано')}
+
+ФОКУС РЕКОМЕНДАЦИИ: {focus}
 
 ТРЕБОВАНИЯ К ОТВЕТУ:
 1. Максимум 4 эмодзи в сообщении
-2. Блоки текста не более 6 строк
-3. Разделители между рекомендациями
-4. Прямые ссылки на товары
-5. Обоснование выбора для каждого аромата
+2. Краткие блоки текста (не более 5 строк)
+3. Обязательно указывайте артикул в формате [Артикул: XXX]
+4. Обоснование выбора для каждого аромата (2-3 строки)
 
-         ФОРМАТ ОТВЕТА:
-         🎯 **Персональные рекомендации**
-         
-         1. [Бренд] - [Название аромата] ([Фабрика]) [Артикул: XXX]
-         Описание и обоснование выбора (2-3 строки)
-         🛒 [Ссылка на товар]
-         
-         ——————————
-         
-         2. [Бренд] - [Название аромата] ([Фабрика]) [Артикул: XXX]
-         Описание и обоснование выбора (2-3 строки)
-         🛒 [Ссылка на товар]
-         
-         ВАЖНО: Обязательно указывайте артикул в квадратных скобках, если он есть в списке товаров!
+ФОРМАТ ОТВЕТА:
+🎯 **Персональные рекомендации**
+
+1. [Бренд] [Название] ([Фабрика]) [Артикул: XXX]
+Обоснование выбора
+🛒 [Ссылка на товар]
+
+———————————
+
+2. [Бренд] [Название] ([Фабрика]) [Артикул: XXX]
+Обоснование выбора
+🛒 [Ссылка на товар]
 
 Доступные ароматы: {str(available_perfumes)[:1000]}...
 
@@ -479,6 +488,6 @@ class PerfumeQuizSystem:
         
         return prompt
 
-def create_quiz_system() -> PerfumeQuizSystem:
-    """Создает экземпляр улучшенной системы квиза"""
-    return PerfumeQuizSystem()
+def create_quiz_system() -> UniversalPerfumeQuizSystem:
+    """Создает экземпляр улучшенной универсальной системы квиза"""
+    return UniversalPerfumeQuizSystem()

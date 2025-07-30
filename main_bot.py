@@ -19,7 +19,7 @@ from telegram.ext import (
 
 # Импорты наших модулей
 from config import BOT_TOKEN, OPENROUTER_API_KEY, OPENROUTER_CONFIG, DATA_FILES, LLM_LIMITS, ADMIN_USER_ID, TEXT_FORMATTING
-from quiz_system import PerfumeQuizSystem, create_quiz_system
+from quiz_system import UniversalPerfumeQuizSystem, create_quiz_system
 from ai_prompts import AIPrompts, PromptLimits
 
 # Настройка логирования
@@ -262,7 +262,7 @@ class PerfumeConsultantBot:
         return enhanced_list
 
     def _find_perfume_url(self, perfume_name: str) -> Optional[str]:
-        """Находит URL для конкретного аромата с улучшенным поиском"""
+        """Находит URL для конкретного аромата с улучшенным поиском по артикулу"""
         if 'full_catalog' not in self.normalized_data:
             return None
             
@@ -283,71 +283,97 @@ class PerfumeConsultantBot:
         logger.info(f"🔍 Ищем URL для: '{perfume_name}' -> '{normalized_search}'" + 
                    (f" [Артикул: {target_article}]" if target_article else ""))
         
-        # 1. Приоритетный поиск по артикулу, если указан
+        # 1. ПРИОРИТЕТНЫЙ поиск по артикулу - УЛУЧШЕННАЯ ВЕРСИЯ
         if target_article:
-            for perfume in perfumes:
-                perfume_article = perfume.get('article', '').strip()
-                if perfume_article and perfume_article == target_article:
-                    logger.info(f"✅ Найдено по артикулу {target_article}: {perfume.get('url')}")
-                    return perfume.get('url')
-        
-        # 2. Поиск по точному совпадению бренд + название
-        search_parts = normalized_search.split()
-        if len(search_parts) >= 2:
-            possible_brand = search_parts[0]
-            possible_name = ' '.join(search_parts[1:])
+            # Проверяем все возможные варианты артикула
+            article_variants = [
+                target_article,  # Точное совпадение
+                target_article.replace('-', ''),  # Без дефисов
+                target_article.upper(),  # В верхнем регистре
+                target_article.lower(),  # В нижнем регистре
+            ]
             
             for perfume in perfumes:
-                brand = perfume.get('brand', '').lower().strip()
-                name = perfume.get('name', '').lower().strip()
-                
-                if (brand == possible_brand and name == possible_name) or \
-                   (possible_brand in brand and possible_name in name):
-                    logger.info(f"✅ Найдено по бренд+название: {perfume.get('url')}")
+                perfume_article = perfume.get('article', '').strip()
+                # Проверяем артикул в основном поле
+                if perfume_article and perfume_article in article_variants:
+                    logger.info(f"✅ Найдено по артикулу (основное поле) {perfume_article}: {perfume.get('url')}")
                     return perfume.get('url')
-        
-        # 3. Поиск по частичному совпадению в full_title
-        for perfume in perfumes:
-            full_title = perfume.get('full_title', '').lower().strip()
-            if full_title:
-                # Нормализуем full_title также
-                normalized_title = re.sub(r'[^\w\s]', ' ', full_title)
-                normalized_title = ' '.join(normalized_title.split())
                 
-                # Проверяем, содержатся ли ключевые слова из поиска в заголовке
-                search_words = normalized_search.split()
-                title_words = normalized_title.split()
-                
-                matches = 0
-                for search_word in search_words:
-                    if len(search_word) > 2:  # Игнорируем короткие слова
-                        for title_word in title_words:
-                            if search_word in title_word or title_word in search_word:
-                                matches += 1
-                                break
-                
-                # Если найдено достаточно совпадений
-                if matches >= min(2, len(search_words)):
-                    logger.info(f"✅ Найдено по ключевым словам ({matches} совпадений): {perfume.get('url')}")
+                # Проверяем артикул в details, если основное поле пустое
+                details_article = perfume.get('details', {}).get('article', '').strip()
+                if details_article and details_article in article_variants:
+                    logger.info(f"✅ Найдено по артикулу (details) {details_article}: {perfume.get('url')}")
                     return perfume.get('url')
+                
+                # Проверяем частичное вхождение артикула в URL (для случаев типа 343713-T)
+                url = perfume.get('url', '')
+                if target_article in url:
+                    logger.info(f"✅ Найдено по артикулу в URL {target_article}: {url}")
+                    return url
         
-        # 4. Поиск по unique_key
+        # 2. Поиск по exact бренд + название
+        search_parts = normalized_search.split()
+        if len(search_parts) >= 2:
+            # Пробуем разные варианты разбивки на бренд и название
+            for split_pos in range(1, min(len(search_parts), 4)):  # Максимум 3 слова для бренда
+                possible_brand = ' '.join(search_parts[:split_pos])
+                possible_name = ' '.join(search_parts[split_pos:])
+                
+                for perfume in perfumes:
+                    brand = perfume.get('brand', '').lower().strip()
+                    name = perfume.get('name', '').lower().strip()
+                    
+                    # Точное совпадение
+                    if brand == possible_brand and name == possible_name:
+                        logger.info(f"✅ Найдено точное совпадение бренд+название: {perfume.get('url')}")
+                        return perfume.get('url')
+                    
+                    # Частичное совпадение (бренд содержится, название содержится)
+                    if (possible_brand in brand or brand in possible_brand) and \
+                       (possible_name in name or name in possible_name):
+                        logger.info(f"✅ Найдено частичное совпадение бренд+название: {perfume.get('url')}")
+                        return perfume.get('url')
+        
+        # 3. Поиск по unique_key (более точный)
         for perfume in perfumes:
             unique_key = perfume.get('unique_key', '').lower().strip()
             if unique_key:
                 key_parts = unique_key.split('|')
                 search_words = normalized_search.split()
                 
-                matches = 0
+                # Проверяем, что все ключевые слова поиска найдены в unique_key
+                found_words = 0
                 for search_word in search_words:
-                    if len(search_word) > 2:
+                    if len(search_word) > 2:  # Игнорируем короткие слова
                         for key_part in key_parts:
-                            if search_word in key_part or key_part in search_word:
-                                matches += 1
+                            if search_word in key_part:
+                                found_words += 1
                                 break
                 
-                if matches >= min(2, len(search_words)):
-                    logger.info(f"✅ Найдено по unique_key: {perfume.get('url')}")
+                # Требуем высокий процент совпадений
+                if found_words >= len([w for w in search_words if len(w) > 2]) * 0.7:
+                    logger.info(f"✅ Найдено по unique_key ({found_words} совпадений): {perfume.get('url')}")
+                    return perfume.get('url')
+        
+        # 4. Поиск по full_title (с повышенным порогом)
+        for perfume in perfumes:
+            full_title = perfume.get('full_title', '').lower().strip()
+            if full_title:
+                # Нормализуем full_title
+                normalized_title = re.sub(r'[^\w\s]', ' ', full_title)
+                normalized_title = ' '.join(normalized_title.split())
+                
+                # Проверяем содержание ключевых слов
+                search_words = [w for w in normalized_search.split() if len(w) > 2]
+                matches = 0
+                for search_word in search_words:
+                    if search_word in normalized_title:
+                        matches += 1
+                
+                # Требуем больше совпадений для full_title поиска
+                if matches >= len(search_words) * 0.8:  # 80% слов должны совпадать
+                    logger.info(f"✅ Найдено по full_title ({matches}/{len(search_words)} совпадений): {perfume.get('url')}")
                     return perfume.get('url')
         
         logger.warning(f"❌ URL не найден для: '{perfume_name}'")
