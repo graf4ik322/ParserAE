@@ -327,36 +327,76 @@ class CompleteParfumeParser:
             return perfume
 
     def get_all_pages_urls(self) -> List[str]:
-        """Получает URLs всех страниц каталога"""
+        """Получает URLs всех страниц каталога с автоматическим определением максимальной страницы"""
         catalog_url = f"{self.base_url}/perfume/"
-        soup = self.get_page_content(catalog_url)
-        if not soup:
-            return [catalog_url]
-        
         urls = [catalog_url]
         
-        # Ищем пагинацию
-        pagination_selectors = [
-            'nav.pagination a',
-            '.pagination a',
-            'a[href*="/perfume/page/"]',
-            'a[href*="page="]'
-        ]
+        # Сначала пробуем найти пагинацию на первой странице
+        soup = self.get_page_content(catalog_url)
+        if soup:
+            # Ищем максимальный номер страницы в пагинации
+            pagination_links = soup.select('a[href*="/perfume/page-"], a[data-ca-page]')
+            max_page_from_pagination = 1
+            
+            for link in pagination_links:
+                href = link.get('href', '')
+                page_attr = link.get('data-ca-page', '')
+                
+                # Извлекаем номер страницы из href
+                page_match = re.search(r'/perfume/page-(\d+)/', href)
+                if page_match:
+                    page_num = int(page_match.group(1))
+                    max_page_from_pagination = max(max_page_from_pagination, page_num)
+                
+                # Извлекаем номер страницы из атрибута data-ca-page
+                if page_attr.isdigit():
+                    page_num = int(page_attr)
+                    max_page_from_pagination = max(max_page_from_pagination, page_num)
+            
+            logger.info(f"Максимальная страница из пагинации: {max_page_from_pagination}")
         
-        for selector in pagination_selectors:
-            links = soup.select(selector)
-            if links:
-                for link in links:
-                    href = link.get('href')
-                    if href and '/perfume/' in href:
-                        if href.startswith('/'):
-                            href = urljoin(self.base_url, href)
-                        if href not in urls:
-                            urls.append(href)
-                break
+        # Автоматическое определение реального количества страниц методом бинарного поиска
+        def has_products(page_num: int) -> bool:
+            """Проверяет есть ли товары на странице"""
+            try:
+                test_url = f"{self.base_url}/perfume/page-{page_num}/"
+                test_soup = self.get_page_content(test_url)
+                if test_soup:
+                    products = test_soup.find_all('a', class_='product-title')
+                    return len(products) > 0
+                return False
+            except Exception as e:
+                logger.error(f"Ошибка при проверке страницы {page_num}: {e}")
+                return False
         
-        logger.info(f"Найдено страниц каталога: {len(urls)}")
-        return sorted(urls)
+        # Бинарный поиск максимальной страницы
+        low = 1
+        high = max(max_page_from_pagination * 2, 50)  # Берем в 2 раза больше найденного или минимум 50
+        last_valid_page = 1
+        
+        logger.info(f"Ищу максимальную страницу в диапазоне 1-{high}...")
+        
+        while low <= high:
+            mid = (low + high) // 2
+            logger.debug(f"Проверяю страницу {mid}")
+            
+            if has_products(mid):
+                last_valid_page = mid
+                low = mid + 1
+            else:
+                high = mid - 1
+        
+        logger.info(f"Найдена максимальная страница: {last_valid_page}")
+        
+        # Генерируем все URLs
+        for page in range(1, last_valid_page + 1):
+            if page == 1:
+                continue  # Первая страница уже добавлена
+            page_url = f"{self.base_url}/perfume/page-{page}/"
+            urls.append(page_url)
+        
+        logger.info(f"Всего страниц каталога: {len(urls)}")
+        return urls
 
     def parse_all_catalog(self) -> List[Dict[str, str]]:
         """Парсит весь каталог"""
@@ -389,9 +429,13 @@ class CompleteParfumeParser:
         # Этап 2: Извлечение подробных характеристик с использованием многопоточности
         logger.info("🔍 Этап 2: Извлечение подробных характеристик товаров...")
         
-        # Ограничиваем количество товаров для тестирования (можно убрать для полного парсинга)
-        # test_perfumes = all_perfumes[:10]  # Только первые 10 для тестирования
-        test_perfumes = all_perfumes  # Все товары
+        # Для больших объемов данных можно ограничить количество товаров для извлечения деталей
+        # Например, только первые 100 товаров для быстрого тестирования
+        if len(all_perfumes) > 500:
+            logger.info(f"⚠️ Найдено {len(all_perfumes)} товаров. Для демонстрации обрабатываю только первые 100 товаров с подробными характеристиками.")
+            test_perfumes = all_perfumes[:100]  # Первые 100 для демонстрации
+        else:
+            test_perfumes = all_perfumes  # Все товары если их не очень много
         
         with concurrent.futures.ThreadPoolExecutor(max_workers=self.max_workers) as executor:
             # Отправляем задачи на выполнение

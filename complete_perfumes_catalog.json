@@ -2,78 +2,70 @@
   "metadata": {
     "source": "aroma-euro.ru",
     "catalog_url": "https://aroma-euro.ru/perfume/",
-    "parsing_date": "2025-07-30 01:42:46",
-    "total_count": 127,
+    "parsing_date": "2025-07-30 01:53:16",
+    "total_count": 100,
     "parser_version": "complete-details-1.0",
     "analysis": {
       "factory_stats": {
-        "Givaudan": 61,
-        "LZ AG": 55,
+        "Givaudan": 46,
+        "LZ AG": 44,
         "Seluz": 3,
         "Argeville": 3,
         "Lz": 2,
-        "Givaudan Premium": 2,
-        "Hamidi": 1
+        "Givaudan Premium": 2
       },
       "brand_stats": {
         "Chanel": 8,
-        "Ex Nihilo": 6,
         "Escentric Molecules": 5,
-        "Tom Ford": 5,
-        "Tiziana terenzi": 5,
-        "Byredo": 5,
-        "Dolce&Gabbana": 4,
+        "Ex Nihilo": 5,
+        "Tom Ford": 4,
+        "Tiziana terenzi": 4,
         "Victoria Secret": 4,
         "Paco Rabanne": 4,
         "Lanvin": 4,
         "Attar Collection": 4,
-        "Versace": 4,
-        "Giorgio Armani": 4,
+        "Byredo": 4,
+        "Dolce&Gabbana": 3,
         "Lacoste": 3,
+        "Versace": 3,
         "Christian Dior": 3,
-        "Xerjoff": 3,
-        "Kilian": 3,
-        "Hugo Boss": 3,
         "Antonio Banderas": 2,
-        "Ванильная смесь": 2,
-        "Gucci": 2,
         "Maison Francis Kurkdjian": 2,
         "Yves Saint Laurent": 2,
-        "Creed": 2,
         "Marc-Antoine Barrois": 2,
+        "Creed": 2,
         "Черный перец": 2,
+        "Giorgio Armani": 2,
         "Haute Fragrance": 2,
-        "Jo Malone": 2,
-        "Zarkoperfume": 2,
-        "Louis Vuitton": 2,
-        "Vilhelm Parfumerie": 2,
-        "Bvlgari": 2,
+        "Kilian": 2,
         "Nasomatto": 1,
         "Givenchy": 1,
+        "Ванильная смесь": 1,
+        "Gucci": 1,
         "Ajmal": 1,
         "Zam Zam": 1,
         "Orto Parisi": 1,
         "Thomas Kosmala": 1,
+        "Xerjoff": 1,
         "Carolina Herrera": 1,
         "Trussardi": 1,
         "Richard": 1,
         "Anna Sui": 1,
+        "Jo Malone": 1,
+        "Zarkoperfume": 1,
         "Juliette Has A Gun": 1,
+        "Louis Vuitton": 1,
         "Franck Boclet": 1,
+        "Vilhelm Parfumerie": 1,
         "Burberry": 1,
         "Sheykh Shuyukh": 1,
+        "Bvlgari": 1,
         "Montale": 1,
-        "Memo": 1,
-        "Escada": 1,
-        "Boadicea The Victorius": 1,
-        "Britney Spears": 1,
-        "Parfums De Marly": 1,
-        "Hamidi": 1,
-        "Essential Parfums": 1
+        "Memo": 1
       },
       "quality_stats": {
-        "Premium": 61,
-        "": 55,
+        "Premium": 46,
+        "": 45,
         "233285-T": 1,
         "Top": 1,
         "339696": 1,
@@ -82,43 +74,35 @@
         "558483-A": 1,
         "680231": 1,
         "339711": 1,
-        "502557": 1,
-        "160179": 1,
-        "353110": 1
+        "502557": 1
       },
       "gender_stats": {
-        "Женский": 49,
-        "Унисекс": 48,
-        "Мужской": 24,
-        "": 6
+        "Женский": 40,
+        "Унисекс": 37,
+        "Мужской": 18,
+        "": 5
       },
       "fragrance_group_stats": {
-        "Цветочные": 50,
-        "фруктовые": 36,
-        "Восточные": 32,
-        "цветочные": 17,
-        "Древесные": 15,
-        "Фужерные": 11,
-        "пряные": 10,
-        "водяные": 9,
-        "гурманские": 9,
-        "древесно-мускусные": 8,
-        "Шипровые": 7,
-        "фужерные": 7,
-        "древесные": 7,
+        "Цветочные": 41,
+        "фруктовые": 32,
+        "Восточные": 26,
+        "цветочные": 16,
+        "Древесные": 12,
+        "Фужерные": 8,
+        "водяные": 7,
+        "пряные": 7,
+        "древесно-мускусные": 7,
+        "Шипровые": 6,
+        "фужерные": 6,
+        "гурманские": 6,
+        "древесные": 6,
         "сладкие": 4,
         "мускусные": 3,
-        "Цитрусовые": 3,
         "альдегидные": 2,
-        "зеленые": 2,
-        "Пудровый": 1,
-        "мускусный": 1,
-        "цветочный": 1,
-        "Кожаные": 1,
-        "Водяные": 1
+        "Цитрусовые": 2
       },
-      "total_products": 127,
-      "products_with_details": 43
+      "total_products": 100,
+      "products_with_details": 35
     }
   },
   "perfumes": [
@@ -213,24 +197,6 @@
       }
     },
     {
-      "full_title": "Nasomatto Black Afgano (мотив аромата), Lz 359607",
-      "brand": "Nasomatto",
-      "name": "Black Afgano",
-      "factory": "Lz",
-      "article": "359607",
-      "url": "https://aroma-euro.ru/perfume/nasomatto-black-afgano-luzi/",
-      "price": "45.00₽",
-      "unique_key": "nasomatto|black afgano|lz",
-      "details": {
-        "article": "",
-        "quality": "",
-        "brand_detailed": "",
-        "gender": "",
-        "fragrance_group": "",
-        "factory_detailed": ""
-      }
-    },
-    {
       "full_title": "Victoria's Secret Eau So Sexy Eau De Parfum (мотив), Lz 339696",
       "brand": "Victoria's Secret",
       "name": "Eau So Sexy Eau De Parfum",
@@ -246,6 +212,24 @@
         "gender": "Женский",
         "fragrance_group": "Цветочные, фруктовые, сладкие",
         "factory_detailed": "LZ AG"
+      }
+    },
+    {
+      "full_title": "Nasomatto Black Afgano (мотив аромата), Lz 359607",
+      "brand": "Nasomatto",
+      "name": "Black Afgano",
+      "factory": "Lz",
+      "article": "359607",
+      "url": "https://aroma-euro.ru/perfume/nasomatto-black-afgano-luzi/",
+      "price": "45.00₽",
+      "unique_key": "nasomatto|black afgano|lz",
+      "details": {
+        "article": "",
+        "quality": "",
+        "brand_detailed": "",
+        "gender": "",
+        "fragrance_group": "",
+        "factory_detailed": ""
       }
     },
     {
@@ -285,24 +269,6 @@
       }
     },
     {
-      "full_title": "Ванильная смесь (мотив) Lz 700902",
-      "brand": "Ванильная смесь",
-      "name": "Lz 700902",
-      "factory": "",
-      "article": "",
-      "url": "https://aroma-euro.ru/perfume/vanilla-smes-lz-700902/",
-      "price": "16.00₽",
-      "unique_key": "ванильная смесь|lz 700902|",
-      "details": {
-        "article": "",
-        "quality": "700902",
-        "brand_detailed": "",
-        "gender": "Унисекс",
-        "fragrance_group": "Восточные, гурманские",
-        "factory_detailed": "LZ AG"
-      }
-    },
-    {
       "full_title": "Givenchy Ange ou Demon Le Secret (мотив), Givaudan Premium",
       "brand": "Givenchy",
       "name": "Ange ou Demon Le Secret",
@@ -318,6 +284,24 @@
         "gender": "",
         "fragrance_group": "",
         "factory_detailed": "Givaudan"
+      }
+    },
+    {
+      "full_title": "Ванильная смесь (мотив) Lz 700902",
+      "brand": "Ванильная смесь",
+      "name": "Lz 700902",
+      "factory": "",
+      "article": "",
+      "url": "https://aroma-euro.ru/perfume/vanilla-smes-lz-700902/",
+      "price": "16.00₽",
+      "unique_key": "ванильная смесь|lz 700902|",
+      "details": {
+        "article": "",
+        "quality": "700902",
+        "brand_detailed": "",
+        "gender": "Унисекс",
+        "fragrance_group": "Восточные, гурманские",
+        "factory_detailed": "LZ AG"
       }
     },
     {
@@ -339,24 +323,6 @@
       }
     },
     {
-      "full_title": "Lanvin Eclat D'Arpege (мотив), Lz 236025 / 233299",
-      "brand": "Lanvin",
-      "name": "Eclat D'Arpege",
-      "factory": "Lz",
-      "article": "236025 / 233299",
-      "url": "https://aroma-euro.ru/perfume/lanvin-eclat-darpege-luzi/",
-      "price": "14.00₽",
-      "unique_key": "lanvin|eclat d'arpege|lz",
-      "details": {
-        "article": "236025",
-        "quality": "",
-        "brand_detailed": "Lanvin",
-        "gender": "Женский",
-        "fragrance_group": "Цветочные, фруктовые",
-        "factory_detailed": "LZ AG"
-      }
-    },
-    {
       "full_title": "Lacoste L12.12 White (мотив), Givaudan Premium",
       "brand": "Lacoste",
       "name": "L12.12 White",
@@ -372,6 +338,24 @@
         "gender": "Мужской",
         "fragrance_group": "Фужерные, древесные",
         "factory_detailed": "Givaudan"
+      }
+    },
+    {
+      "full_title": "Lanvin Eclat D'Arpege (мотив), Lz 236025 / 233299",
+      "brand": "Lanvin",
+      "name": "Eclat D'Arpege",
+      "factory": "Lz",
+      "article": "236025 / 233299",
+      "url": "https://aroma-euro.ru/perfume/lanvin-eclat-darpege-luzi/",
+      "price": "14.00₽",
+      "unique_key": "lanvin|eclat d'arpege|lz",
+      "details": {
+        "article": "236025",
+        "quality": "",
+        "brand_detailed": "Lanvin",
+        "gender": "Женский",
+        "fragrance_group": "Цветочные, фруктовые",
+        "factory_detailed": "LZ AG"
       }
     },
     {
@@ -429,24 +413,6 @@
       }
     },
     {
-      "full_title": "Gucci - Flora by Gucci Gorgeous Gardenia (мотив), Givaudan Premium",
-      "brand": "Gucci",
-      "name": "- Flora by Gucci Gorgeous Gardenia",
-      "factory": "Givaudan Premium",
-      "article": "",
-      "url": "https://aroma-euro.ru/perfume/gucci-flora-by-gucci-gorgeous-gardenia-motiv-givaudan-premium/",
-      "price": "25.00₽",
-      "unique_key": "gucci|- flora by gucci gorgeous gardenia|givaudan premium",
-      "details": {
-        "article": "",
-        "quality": "Premium",
-        "brand_detailed": "Gucci",
-        "gender": "Женский",
-        "fragrance_group": "Цветочные, фруктовые",
-        "factory_detailed": "Givaudan"
-      }
-    },
-    {
       "full_title": "Tom Ford Lost Cherry (мотив), Givaudan Premium",
       "brand": "Tom Ford",
       "name": "Lost Cherry",
@@ -479,6 +445,24 @@
         "brand_detailed": "Maison Francis Kurkdjian",
         "gender": "Унисекс",
         "fragrance_group": "Восточные, цветочные",
+        "factory_detailed": "Givaudan"
+      }
+    },
+    {
+      "full_title": "Gucci - Flora by Gucci Gorgeous Gardenia (мотив), Givaudan Premium",
+      "brand": "Gucci",
+      "name": "- Flora by Gucci Gorgeous Gardenia",
+      "factory": "Givaudan Premium",
+      "article": "",
+      "url": "https://aroma-euro.ru/perfume/gucci-flora-by-gucci-gorgeous-gardenia-motiv-givaudan-premium/",
+      "price": "25.00₽",
+      "unique_key": "gucci|- flora by gucci gorgeous gardenia|givaudan premium",
+      "details": {
+        "article": "",
+        "quality": "Premium",
+        "brand_detailed": "Gucci",
+        "gender": "Женский",
+        "fragrance_group": "Цветочные, фруктовые",
         "factory_detailed": "Givaudan"
       }
     },
@@ -519,24 +503,6 @@
       }
     },
     {
-      "full_title": "Creed Aventus (мотив), Lz 239790",
-      "brand": "Creed",
-      "name": "Aventus",
-      "factory": "Lz",
-      "article": "239790",
-      "url": "https://aroma-euro.ru/perfume/creed-aventus-luzi/",
-      "price": "35.00₽",
-      "unique_key": "creed|aventus|lz",
-      "details": {
-        "article": "239790",
-        "quality": "",
-        "brand_detailed": "Creed",
-        "gender": "Мужской",
-        "fragrance_group": "Шипровые, фруктовые",
-        "factory_detailed": "LZ AG"
-      }
-    },
-    {
       "full_title": "Marc-Antoine Barrois Ganymede (мотив), Givaudan Premium",
       "brand": "Marc-Antoine Barrois",
       "name": "Ganymede",
@@ -555,20 +521,20 @@
       }
     },
     {
-      "full_title": "Maison Francis Kurkdjian Baccarat Rouge 540 (мотив), Lz 233206",
-      "brand": "Maison Francis Kurkdjian",
-      "name": "Baccarat Rouge 540",
+      "full_title": "Creed Aventus (мотив), Lz 239790",
+      "brand": "Creed",
+      "name": "Aventus",
       "factory": "Lz",
-      "article": "233206",
-      "url": "https://aroma-euro.ru/perfume/maison-francis-kurkdjian-baccarat-rouge-luzi/",
-      "price": "28.00₽",
-      "unique_key": "maison francis kurkdjian|baccarat rouge 540|lz",
+      "article": "239790",
+      "url": "https://aroma-euro.ru/perfume/creed-aventus-luzi/",
+      "price": "35.00₽",
+      "unique_key": "creed|aventus|lz",
       "details": {
-        "article": "233206",
+        "article": "239790",
         "quality": "",
-        "brand_detailed": "Maison Francis Kurkdjian",
-        "gender": "Унисекс",
-        "fragrance_group": "Восточные, цветочные",
+        "brand_detailed": "Creed",
+        "gender": "Мужской",
+        "fragrance_group": "Шипровые, фруктовые",
         "factory_detailed": "LZ AG"
       }
     },
@@ -609,6 +575,24 @@
       }
     },
     {
+      "full_title": "Maison Francis Kurkdjian Baccarat Rouge 540 (мотив), Lz 233206",
+      "brand": "Maison Francis Kurkdjian",
+      "name": "Baccarat Rouge 540",
+      "factory": "Lz",
+      "article": "233206",
+      "url": "https://aroma-euro.ru/perfume/maison-francis-kurkdjian-baccarat-rouge-luzi/",
+      "price": "28.00₽",
+      "unique_key": "maison francis kurkdjian|baccarat rouge 540|lz",
+      "details": {
+        "article": "233206",
+        "quality": "",
+        "brand_detailed": "Maison Francis Kurkdjian",
+        "gender": "Унисекс",
+        "fragrance_group": "Восточные, цветочные",
+        "factory_detailed": "LZ AG"
+      }
+    },
+    {
       "full_title": "Zam Zam Cold (мотив), Lz",
       "brand": "Zam Zam",
       "name": "Cold",
@@ -623,6 +607,24 @@
         "brand_detailed": "",
         "gender": "Унисекс",
         "fragrance_group": "Цветочные, фруктовые",
+        "factory_detailed": "LZ AG"
+      }
+    },
+    {
+      "full_title": "Byredo Blanche (мотив), Lz 280100",
+      "brand": "Byredo",
+      "name": "Blanche",
+      "factory": "Lz",
+      "article": "280100",
+      "url": "https://aroma-euro.ru/perfume/byredo-blanche-luzi/",
+      "price": "18.00₽",
+      "unique_key": "byredo|blanche|lz",
+      "details": {
+        "article": "280100",
+        "quality": "",
+        "brand_detailed": "Byredo",
+        "gender": "Женский",
+        "fragrance_group": "Цветочные, альдегидные",
         "factory_detailed": "LZ AG"
       }
     },
@@ -645,24 +647,6 @@
       }
     },
     {
-      "full_title": "Byredo Blanche (мотив), Lz 280100",
-      "brand": "Byredo",
-      "name": "Blanche",
-      "factory": "Lz",
-      "article": "280100",
-      "url": "https://aroma-euro.ru/perfume/byredo-blanche-luzi/",
-      "price": "18.00₽",
-      "unique_key": "byredo|blanche|lz",
-      "details": {
-        "article": "280100",
-        "quality": "",
-        "brand_detailed": "Byredo",
-        "gender": "Женский",
-        "fragrance_group": "Цветочные, альдегидные",
-        "factory_detailed": "LZ AG"
-      }
-    },
-    {
       "full_title": "Orto Parisi Megamare (мотив), Givaudan Premium",
       "brand": "Orto Parisi",
       "name": "Megamare",
@@ -677,6 +661,24 @@
         "brand_detailed": "Orto Parisi",
         "gender": "Унисекс",
         "fragrance_group": "Фужерные, водяные",
+        "factory_detailed": "Givaudan"
+      }
+    },
+    {
+      "full_title": "Chanel Allure Homme Sport (мотив), Givaudan Premium",
+      "brand": "Chanel",
+      "name": "Allure Homme Sport",
+      "factory": "Givaudan Premium",
+      "article": "",
+      "url": "https://aroma-euro.ru/perfume/chanel-allure-homme-sport-motiv-givaudan-premium/",
+      "price": "28.00₽",
+      "unique_key": "chanel|allure homme sport|givaudan premium",
+      "details": {
+        "article": "",
+        "quality": "Premium",
+        "brand_detailed": "Chanel",
+        "gender": "Мужской",
+        "fragrance_group": "Древесные, пряные",
         "factory_detailed": "Givaudan"
       }
     },
@@ -696,24 +698,6 @@
         "gender": "Унисекс",
         "fragrance_group": "Фужерные, пряные",
         "factory_detailed": "LZ AG"
-      }
-    },
-    {
-      "full_title": "Chanel Allure Homme Sport (мотив), Givaudan Premium",
-      "brand": "Chanel",
-      "name": "Allure Homme Sport",
-      "factory": "Givaudan Premium",
-      "article": "",
-      "url": "https://aroma-euro.ru/perfume/chanel-allure-homme-sport-motiv-givaudan-premium/",
-      "price": "28.00₽",
-      "unique_key": "chanel|allure homme sport|givaudan premium",
-      "details": {
-        "article": "",
-        "quality": "Premium",
-        "brand_detailed": "Chanel",
-        "gender": "Мужской",
-        "fragrance_group": "Древесные, пряные",
-        "factory_detailed": "Givaudan"
       }
     },
     {
@@ -807,24 +791,6 @@
       }
     },
     {
-      "full_title": "Christian Dior Sauvage (мотив), Lz 342272-T",
-      "brand": "Christian Dior",
-      "name": "Sauvage",
-      "factory": "Lz",
-      "article": "342272-T",
-      "url": "https://aroma-euro.ru/perfume/christian-dior-sauvage-luzi/",
-      "price": "40.00₽",
-      "unique_key": "christian dior|sauvage|lz",
-      "details": {
-        "article": "342272-T",
-        "quality": "",
-        "brand_detailed": "Christian Dior",
-        "gender": "Мужской",
-        "fragrance_group": "Фужерные",
-        "factory_detailed": "LZ AG"
-      }
-    },
-    {
       "full_title": "Giorgio Armani Acqua Di Gio Absolu Instinct (мотив), Argeville",
       "brand": "Giorgio Armani",
       "name": "Acqua Di Gio Absolu Instinct",
@@ -840,6 +806,24 @@
         "gender": "Мужской",
         "fragrance_group": "Древесные, водяные",
         "factory_detailed": "Argeville"
+      }
+    },
+    {
+      "full_title": "Christian Dior Sauvage (мотив), Lz 342272-T",
+      "brand": "Christian Dior",
+      "name": "Sauvage",
+      "factory": "Lz",
+      "article": "342272-T",
+      "url": "https://aroma-euro.ru/perfume/christian-dior-sauvage-luzi/",
+      "price": "40.00₽",
+      "unique_key": "christian dior|sauvage|lz",
+      "details": {
+        "article": "342272-T",
+        "quality": "",
+        "brand_detailed": "Christian Dior",
+        "gender": "Мужской",
+        "fragrance_group": "Фужерные",
+        "factory_detailed": "LZ AG"
       }
     },
     {
@@ -951,6 +935,24 @@
       }
     },
     {
+      "full_title": "Chanel Egoiste Platinum (мотив), Givaudan Premium",
+      "brand": "Chanel",
+      "name": "Egoiste Platinum",
+      "factory": "Givaudan Premium",
+      "article": "",
+      "url": "https://aroma-euro.ru/perfume/chanel-egoiste-platinum-motiv-givaudan-premium/",
+      "price": "28.00₽",
+      "unique_key": "chanel|egoiste platinum|givaudan premium",
+      "details": {
+        "article": "",
+        "quality": "Premium",
+        "brand_detailed": "Chanel",
+        "gender": "Мужской",
+        "fragrance_group": "Древесные, цветочные, мускусные",
+        "factory_detailed": "Givaudan"
+      }
+    },
+    {
       "full_title": "Xerjoff Sospiro Erba Pura (мотив), Lz 232080-T",
       "brand": "Xerjoff Sospiro",
       "name": "Erba Pura",
@@ -987,20 +989,20 @@
       }
     },
     {
-      "full_title": "Chanel Egoiste Platinum (мотив), Givaudan Premium",
-      "brand": "Chanel",
-      "name": "Egoiste Platinum",
+      "full_title": "Ex Nihilo Narcotique Fleur (мотив), Givaudan Premium",
+      "brand": "Ex Nihilo",
+      "name": "Narcotique Fleur",
       "factory": "Givaudan Premium",
       "article": "",
-      "url": "https://aroma-euro.ru/perfume/chanel-egoiste-platinum-motiv-givaudan-premium/",
-      "price": "28.00₽",
-      "unique_key": "chanel|egoiste platinum|givaudan premium",
+      "url": "https://aroma-euro.ru/perfume/ex-nihilo-narcotique-fleur-motiv-givaudan-premium/",
+      "price": "40.00₽",
+      "unique_key": "ex nihilo|narcotique fleur|givaudan premium",
       "details": {
         "article": "",
         "quality": "Premium",
-        "brand_detailed": "Chanel",
-        "gender": "Мужской",
-        "fragrance_group": "Древесные, цветочные, мускусные",
+        "brand_detailed": "Ex Nihilo",
+        "gender": "Унисекс",
+        "fragrance_group": "Цветочные, фруктовые",
         "factory_detailed": "Givaudan"
       }
     },
@@ -1041,24 +1043,6 @@
       }
     },
     {
-      "full_title": "Ex Nihilo Narcotique Fleur (мотив), Givaudan Premium",
-      "brand": "Ex Nihilo",
-      "name": "Narcotique Fleur",
-      "factory": "Givaudan Premium",
-      "article": "",
-      "url": "https://aroma-euro.ru/perfume/ex-nihilo-narcotique-fleur-motiv-givaudan-premium/",
-      "price": "40.00₽",
-      "unique_key": "ex nihilo|narcotique fleur|givaudan premium",
-      "details": {
-        "article": "",
-        "quality": "Premium",
-        "brand_detailed": "Ex Nihilo",
-        "gender": "Унисекс",
-        "fragrance_group": "Цветочные, фруктовые",
-        "factory_detailed": "Givaudan"
-      }
-    },
-    {
       "full_title": "Byredo Bal D'Afrique (мотив), Lz 233942",
       "brand": "Byredo",
       "name": "Bal D'Afrique",
@@ -1074,6 +1058,24 @@
         "gender": "Унисекс",
         "fragrance_group": "Восточные, древесные",
         "factory_detailed": "LZ AG"
+      }
+    },
+    {
+      "full_title": "Chanel Chance Eau Tendre (мотив), Givaudan Premium",
+      "brand": "Chanel",
+      "name": "Chance Eau Tendre",
+      "factory": "Givaudan Premium",
+      "article": "",
+      "url": "https://aroma-euro.ru/perfume/chanel-chance-eau-tendre-motiv-givaudan-premium/",
+      "price": "25.00₽",
+      "unique_key": "chanel|chance eau tendre|givaudan premium",
+      "details": {
+        "article": "",
+        "quality": "Premium",
+        "brand_detailed": "Chanel",
+        "gender": "Женский",
+        "fragrance_group": "Цветочные, фруктовые",
+        "factory_detailed": "Givaudan"
       }
     },
     {
@@ -1095,20 +1097,20 @@
       }
     },
     {
-      "full_title": "Chanel Chance Eau Tendre (мотив), Givaudan Premium",
-      "brand": "Chanel",
-      "name": "Chance Eau Tendre",
+      "full_title": "Attar Collection Musk Kashmir (мотив), Givaudan Premium",
+      "brand": "Attar Collection",
+      "name": "Musk Kashmir",
       "factory": "Givaudan Premium",
       "article": "",
-      "url": "https://aroma-euro.ru/perfume/chanel-chance-eau-tendre-motiv-givaudan-premium/",
-      "price": "25.00₽",
-      "unique_key": "chanel|chance eau tendre|givaudan premium",
+      "url": "https://aroma-euro.ru/perfume/attar-collection-musk-kashmir-motiv-givaudan-premium/",
+      "price": "35.00₽",
+      "unique_key": "attar collection|musk kashmir|givaudan premium",
       "details": {
         "article": "",
         "quality": "Premium",
-        "brand_detailed": "Chanel",
-        "gender": "Женский",
-        "fragrance_group": "Цветочные, фруктовые",
+        "brand_detailed": "Attar Collection",
+        "gender": "Унисекс",
+        "fragrance_group": "Цветочные, древесно-мускусные",
         "factory_detailed": "Givaudan"
       }
     },
@@ -1146,24 +1148,6 @@
         "gender": "Женский",
         "fragrance_group": "Цветочные, водяные",
         "factory_detailed": ""
-      }
-    },
-    {
-      "full_title": "Attar Collection Musk Kashmir (мотив), Givaudan Premium",
-      "brand": "Attar Collection",
-      "name": "Musk Kashmir",
-      "factory": "Givaudan Premium",
-      "article": "",
-      "url": "https://aroma-euro.ru/perfume/attar-collection-musk-kashmir-motiv-givaudan-premium/",
-      "price": "35.00₽",
-      "unique_key": "attar collection|musk kashmir|givaudan premium",
-      "details": {
-        "article": "",
-        "quality": "Premium",
-        "brand_detailed": "Attar Collection",
-        "gender": "Унисекс",
-        "fragrance_group": "Цветочные, древесно-мускусные",
-        "factory_detailed": "Givaudan"
       }
     },
     {
@@ -1275,6 +1259,24 @@
       }
     },
     {
+      "full_title": "Creed Aventus (мотив), Givaudan Premium",
+      "brand": "Creed",
+      "name": "Aventus",
+      "factory": "Givaudan Premium",
+      "article": "",
+      "url": "https://aroma-euro.ru/perfume/creed-aventus-motiv-givaudan-premium/",
+      "price": "35.00₽",
+      "unique_key": "creed|aventus|givaudan premium",
+      "details": {
+        "article": "",
+        "quality": "Premium",
+        "brand_detailed": "Creed",
+        "gender": "Мужской",
+        "fragrance_group": "Шипровые, фруктовые",
+        "factory_detailed": "Givaudan"
+      }
+    },
+    {
       "full_title": "Jo Malone Blackberry & Bay (мотив), Lz 233781",
       "brand": "Jo Malone",
       "name": "Blackberry & Bay",
@@ -1308,24 +1310,6 @@
         "gender": "Женский",
         "fragrance_group": "Цветочные, фруктовые",
         "factory_detailed": "LZ AG"
-      }
-    },
-    {
-      "full_title": "Creed Aventus (мотив), Givaudan Premium",
-      "brand": "Creed",
-      "name": "Aventus",
-      "factory": "Givaudan Premium",
-      "article": "",
-      "url": "https://aroma-euro.ru/perfume/creed-aventus-motiv-givaudan-premium/",
-      "price": "35.00₽",
-      "unique_key": "creed|aventus|givaudan premium",
-      "details": {
-        "article": "",
-        "quality": "Premium",
-        "brand_detailed": "Creed",
-        "gender": "Мужской",
-        "fragrance_group": "Шипровые, фруктовые",
-        "factory_detailed": "Givaudan"
       }
     },
     {
@@ -1473,24 +1457,6 @@
       }
     },
     {
-      "full_title": "Louis Vuitton L’Immensite (мотив), Lz 233336-T",
-      "brand": "Louis Vuitton",
-      "name": "L’Immensite",
-      "factory": "Lz",
-      "article": "233336-T",
-      "url": "https://aroma-euro.ru/perfume/louis-vuitton-limmensite-luzi/",
-      "price": "40.00₽",
-      "unique_key": "louis vuitton|l’immensite|lz",
-      "details": {
-        "article": "233336-T",
-        "quality": "",
-        "brand_detailed": "Louis Vuitton",
-        "gender": "Мужской",
-        "fragrance_group": "Восточные, пряные",
-        "factory_detailed": "LZ AG"
-      }
-    },
-    {
       "full_title": "Giorgio Armani Acqua Di Gio (мотив), Givaudan Premium",
       "brand": "Giorgio Armani",
       "name": "Acqua Di Gio",
@@ -1509,21 +1475,21 @@
       }
     },
     {
-      "full_title": "Attar Collection Hayati (мотив), Givaudan Premium",
-      "brand": "Attar Collection",
-      "name": "Hayati",
-      "factory": "Givaudan Premium",
-      "article": "",
-      "url": "https://aroma-euro.ru/perfume/attar-collection-hayati-motiv-givaudan-premium/",
-      "price": "25.00₽",
-      "unique_key": "attar collection|hayati|givaudan premium",
+      "full_title": "Louis Vuitton L’Immensite (мотив), Lz 233336-T",
+      "brand": "Louis Vuitton",
+      "name": "L’Immensite",
+      "factory": "Lz",
+      "article": "233336-T",
+      "url": "https://aroma-euro.ru/perfume/louis-vuitton-limmensite-luzi/",
+      "price": "40.00₽",
+      "unique_key": "louis vuitton|l’immensite|lz",
       "details": {
-        "article": "",
-        "quality": "Premium",
-        "brand_detailed": "Attar Collection",
-        "gender": "Унисекс",
-        "fragrance_group": "Цветочные, фруктовые",
-        "factory_detailed": "Givaudan"
+        "article": "233336-T",
+        "quality": "",
+        "brand_detailed": "Louis Vuitton",
+        "gender": "Мужской",
+        "fragrance_group": "Восточные, пряные",
+        "factory_detailed": "LZ AG"
       }
     },
     {
@@ -1542,6 +1508,24 @@
         "gender": "Унисекс",
         "fragrance_group": "Фужерные",
         "factory_detailed": "LZ AG"
+      }
+    },
+    {
+      "full_title": "Attar Collection Hayati (мотив), Givaudan Premium",
+      "brand": "Attar Collection",
+      "name": "Hayati",
+      "factory": "Givaudan Premium",
+      "article": "",
+      "url": "https://aroma-euro.ru/perfume/attar-collection-hayati-motiv-givaudan-premium/",
+      "price": "25.00₽",
+      "unique_key": "attar collection|hayati|givaudan premium",
+      "details": {
+        "article": "",
+        "quality": "Premium",
+        "brand_detailed": "Attar Collection",
+        "gender": "Унисекс",
+        "fragrance_group": "Цветочные, фруктовые",
+        "factory_detailed": "Givaudan"
       }
     },
     {
@@ -1725,6 +1709,24 @@
       }
     },
     {
+      "full_title": "Marc-Antoine Barrois - Tilia (мотив), Lz 336540-T",
+      "brand": "Marc-Antoine Barrois",
+      "name": "- Tilia",
+      "factory": "Lz",
+      "article": "336540-T",
+      "url": "https://aroma-euro.ru/perfume/marc-antoine-barrois-tilia-motiv-lz-336540-t/",
+      "price": "45.00₽",
+      "unique_key": "marc-antoine barrois|- tilia|lz",
+      "details": {
+        "article": "336540-T",
+        "quality": "",
+        "brand_detailed": "Marc-Antoine Barrois",
+        "gender": "Унисекс",
+        "fragrance_group": "Цветочные, древесные, мускусные",
+        "factory_detailed": "LZ AG"
+      }
+    },
+    {
       "full_title": "Bvlgari Tygar (мотив), Lz 343645",
       "brand": "Bvlgari Tygar",
       "name": "Tygar",
@@ -1757,24 +1759,6 @@
         "brand_detailed": "Montale",
         "gender": "Унисекс",
         "fragrance_group": "Восточные, гурманские",
-        "factory_detailed": "LZ AG"
-      }
-    },
-    {
-      "full_title": "Marc-Antoine Barrois - Tilia (мотив), Lz 336540-T",
-      "brand": "Marc-Antoine Barrois",
-      "name": "- Tilia",
-      "factory": "Lz",
-      "article": "336540-T",
-      "url": "https://aroma-euro.ru/perfume/marc-antoine-barrois-tilia-motiv-lz-336540-t/",
-      "price": "45.00₽",
-      "unique_key": "marc-antoine barrois|- tilia|lz",
-      "details": {
-        "article": "336540-T",
-        "quality": "",
-        "brand_detailed": "Marc-Antoine Barrois",
-        "gender": "Унисекс",
-        "fragrance_group": "Цветочные, древесные, мускусные",
         "factory_detailed": "LZ AG"
       }
     },
@@ -1919,492 +1903,6 @@
         "brand_detailed": "Paco Rabanne",
         "gender": "Женский",
         "fragrance_group": "Цветочные, фруктовые",
-        "factory_detailed": "LZ AG"
-      }
-    },
-    {
-      "full_title": "Zarkoperfume - The Muse (мотив), Lz 261267",
-      "brand": "Zarkoperfume",
-      "name": "The Muse",
-      "factory": "Lz",
-      "article": "261267",
-      "url": "https://aroma-euro.ru/perfume/zarkoperfume-the-muse-motiv-lz-261267/",
-      "price": "16.00₽",
-      "unique_key": "zarkoperfume|the muse|lz",
-      "details": {
-        "article": "261267",
-        "quality": "",
-        "brand_detailed": "Zarkoperfume",
-        "gender": "Женский",
-        "fragrance_group": "Пудровый, мускусный, цветочный",
-        "factory_detailed": "LZ AG"
-      }
-    },
-    {
-      "full_title": "Vilhelm Parfumerie Mango Skin (мотив), Lz 339958",
-      "brand": "Vilhelm Parfumerie",
-      "name": "Mango Skin",
-      "factory": "Lz",
-      "article": "339958",
-      "url": "https://aroma-euro.ru/perfume/vilhelm-parfumerie-mango-skin-motiv-luzi-n/",
-      "price": "25.00₽",
-      "unique_key": "vilhelm parfumerie|mango skin|lz",
-      "details": {
-        "article": "339958",
-        "quality": "",
-        "brand_detailed": "",
-        "gender": "Унисекс",
-        "fragrance_group": "Цветочные, фруктовые",
-        "factory_detailed": "LZ AG"
-      }
-    },
-    {
-      "full_title": "Giorgio Armani Acqua Di Gio Woman (мотив), Lz 605620",
-      "brand": "Giorgio Armani",
-      "name": "Acqua Di Gio Woman",
-      "factory": "Lz",
-      "article": "605620",
-      "url": "https://aroma-euro.ru/perfume/giorgio-armani-acqua-di-gioia-woman-motiv-luzi-605620/",
-      "price": "16.00₽",
-      "unique_key": "giorgio armani|acqua di gio woman|lz",
-      "details": {
-        "article": "605620",
-        "quality": "",
-        "brand_detailed": "Giorgio Armani",
-        "gender": "Женский",
-        "fragrance_group": "Цветочные, водяные",
-        "factory_detailed": "LZ AG"
-      }
-    },
-    {
-      "full_title": "Ex Nihilo Fleur Narcotique Love Edition (мотив), Lz 503779",
-      "brand": "Ex Nihilo",
-      "name": "Fleur Narcotique Love Edition",
-      "factory": "Lz",
-      "article": "503779",
-      "url": "https://aroma-euro.ru/perfume/ex-nihilo-fleur-narcotique-love-edition-luzi/",
-      "price": "16.00₽",
-      "unique_key": "ex nihilo|fleur narcotique love edition|lz",
-      "details": {
-        "article": "503779",
-        "quality": "",
-        "brand_detailed": "Ex Nihilo",
-        "gender": "Унисекс",
-        "fragrance_group": "Цветочные, фруктовые",
-        "factory_detailed": "LZ AG"
-      }
-    },
-    {
-      "full_title": "Versace Man Eau Fraiche (мотив), Givaudan Premium",
-      "brand": "Versace",
-      "name": "Man Eau Fraiche",
-      "factory": "Givaudan Premium",
-      "article": "",
-      "url": "https://aroma-euro.ru/perfume/versace-man-eau-fraiche-motiv-givaudan-premium/",
-      "price": "25.00₽",
-      "unique_key": "versace|man eau fraiche|givaudan premium",
-      "details": {
-        "article": "",
-        "quality": "Premium",
-        "brand_detailed": "Versace",
-        "gender": "Мужской",
-        "fragrance_group": "Древесные, водяные",
-        "factory_detailed": "Givaudan"
-      }
-    },
-    {
-      "full_title": "Escada Moon Sparkle for Women (мотив), Lz 337081",
-      "brand": "Escada Moon",
-      "name": "Sparkle for Women",
-      "factory": "Lz",
-      "article": "337081",
-      "url": "https://aroma-euro.ru/perfume/escada-moon-sparkle-for-women-luzi/",
-      "price": "12.00₽",
-      "unique_key": "escada moon|sparkle for women|lz",
-      "details": {
-        "article": "337081",
-        "quality": "",
-        "brand_detailed": "Escada",
-        "gender": "Женский",
-        "fragrance_group": "Цветочные, фруктовые",
-        "factory_detailed": "LZ AG"
-      }
-    },
-    {
-      "full_title": "Ванильная смесь, Givaudan Premium",
-      "brand": "Ванильная смесь",
-      "name": "смесь",
-      "factory": "Givaudan Premium",
-      "article": "",
-      "url": "https://aroma-euro.ru/perfume/zielinski-and-rozen-vanilla-blend-motiv-givaudan-premium/",
-      "price": "28.00₽",
-      "unique_key": "ванильная смесь|смесь|givaudan premium",
-      "details": {
-        "article": "",
-        "quality": "Premium",
-        "brand_detailed": "",
-        "gender": "Унисекс",
-        "fragrance_group": "Восточные, гурманские",
-        "factory_detailed": "Givaudan"
-      }
-    },
-    {
-      "full_title": "Giorgio Armani My Way (мотив), Givaudan Premium",
-      "brand": "Giorgio Armani",
-      "name": "My Way",
-      "factory": "Givaudan Premium",
-      "article": "",
-      "url": "https://aroma-euro.ru/perfume/giorgio-armani-my-way-motiv-givaudan-premium/",
-      "price": "25.00₽",
-      "unique_key": "giorgio armani|my way|givaudan premium",
-      "details": {
-        "article": "",
-        "quality": "Premium",
-        "brand_detailed": "Giorgio Armani",
-        "gender": "Женский",
-        "fragrance_group": "Цветочные",
-        "factory_detailed": "Givaudan"
-      }
-    },
-    {
-      "full_title": "Xerjoff Sospiro Accento (мотив), Lz 501962-T",
-      "brand": "Xerjoff Sospiro",
-      "name": "Accento",
-      "factory": "Lz",
-      "article": "501962-T",
-      "url": "https://aroma-euro.ru/perfume/xerjoff-sospiro-accento-luzi/",
-      "price": "45.00₽",
-      "unique_key": "xerjoff sospiro|accento|lz",
-      "details": {
-        "article": "",
-        "quality": "",
-        "brand_detailed": "Xerjoff",
-        "gender": "Унисекс",
-        "fragrance_group": "Восточные, древесные",
-        "factory_detailed": "LZ AG"
-      }
-    },
-    {
-      "full_title": "Hugo Boss Boss Bottled (мотив), Lz 444335",
-      "brand": "Hugo Boss",
-      "name": "Boss Bottled",
-      "factory": "Lz",
-      "article": "444335",
-      "url": "https://aroma-euro.ru/perfume/hugo-boss-boss-bottled-luzi/",
-      "price": "14.00₽",
-      "unique_key": "hugo boss|boss bottled|lz",
-      "details": {
-        "article": "444335",
-        "quality": "",
-        "brand_detailed": "Hugo Boss",
-        "gender": "Мужской",
-        "fragrance_group": "Древесные, пряные",
-        "factory_detailed": "LZ AG"
-      }
-    },
-    {
-      "full_title": "Tiziana terenzi Cassiopea (мотив), Givaudan Premium",
-      "brand": "Tiziana Terenzi",
-      "name": "Cassiopea",
-      "factory": "Givaudan Premium",
-      "article": "",
-      "url": "https://aroma-euro.ru/perfume/tiziana-terenzi-cassiopea-motiv-givaudan-premium/",
-      "price": "35.00₽",
-      "unique_key": "tiziana terenzi|cassiopea|givaudan premium",
-      "details": {
-        "article": "",
-        "quality": "Premium",
-        "brand_detailed": "Tiziana terenzi",
-        "gender": "Унисекс",
-        "fragrance_group": "Шипровые, цветочные",
-        "factory_detailed": "Givaudan"
-      }
-    },
-    {
-      "full_title": "Boadicea The Victorius Heroine (мотив), Lz 503742",
-      "brand": "Boadicea The",
-      "name": "Victorius Heroine",
-      "factory": "Lz",
-      "article": "503742",
-      "url": "https://aroma-euro.ru/perfume/boadicea-the-victorius-heroine-luzi/",
-      "price": "30.00₽",
-      "unique_key": "boadicea the|victorius heroine|lz",
-      "details": {
-        "article": "503742",
-        "quality": "",
-        "brand_detailed": "Boadicea The Victorius",
-        "gender": "Женский",
-        "fragrance_group": "Цветочные, древесно-мускусные",
-        "factory_detailed": "LZ AG"
-      }
-    },
-    {
-      "full_title": "Gucci - Flora (мотив), Givaudan Premium",
-      "brand": "Gucci",
-      "name": "- Flora",
-      "factory": "Givaudan Premium",
-      "article": "",
-      "url": "https://aroma-euro.ru/perfume/gucci-flora-motiv-givaudan-premium/",
-      "price": "25.00₽",
-      "unique_key": "gucci|- flora|givaudan premium",
-      "details": {
-        "article": "",
-        "quality": "Premium",
-        "brand_detailed": "Gucci",
-        "gender": "Женский",
-        "fragrance_group": "Цветочные",
-        "factory_detailed": "Givaudan"
-      }
-    },
-    {
-      "full_title": "Jo Malone - Wood Sage & Sea Salt (мотив), Lz 160179",
-      "brand": "Jo Malone",
-      "name": "Wood Sage & Sea Salt",
-      "factory": "Lz",
-      "article": "160179",
-      "url": "https://aroma-euro.ru/perfume/jo-malone-wood-sage-and-sea-salt-motiv-luzi-160179/",
-      "price": "20.00₽",
-      "unique_key": "jo malone|wood sage & sea salt|lz",
-      "details": {
-        "article": "",
-        "quality": "160179",
-        "brand_detailed": "Jo Malone",
-        "gender": "Унисекс",
-        "fragrance_group": "Фужерные",
-        "factory_detailed": "LZ AG"
-      }
-    },
-    {
-      "full_title": "Britney Spears Midnight Fantasy [Зам Зам] (мотив), Givaudan Premium",
-      "brand": "Britney Spears",
-      "name": "Midnight Fantasy [Зам Зам]",
-      "factory": "Givaudan Premium",
-      "article": "",
-      "url": "https://aroma-euro.ru/perfume/britney-spears-midnight-fantasy-zam-zam-motiv-givaudan-premium/",
-      "price": "20.00₽",
-      "unique_key": "britney spears|midnight fantasy [зам зам]|givaudan premium",
-      "details": {
-        "article": "",
-        "quality": "Premium",
-        "brand_detailed": "Britney Spears",
-        "gender": "Женский",
-        "fragrance_group": "Цветочные, фруктовые",
-        "factory_detailed": "Givaudan"
-      }
-    },
-    {
-      "full_title": "Parfums De Marly Delina (мотив), Givaudan Premium",
-      "brand": "Parfums De",
-      "name": "Marly Delina",
-      "factory": "Givaudan Premium",
-      "article": "",
-      "url": "https://aroma-euro.ru/perfume/parfums-de-marly-delina-motiv-givaudan-premium/",
-      "price": "25.00₽",
-      "unique_key": "parfums de|marly delina|givaudan premium",
-      "details": {
-        "article": "",
-        "quality": "Premium",
-        "brand_detailed": "Parfums De Marly",
-        "gender": "Женский",
-        "fragrance_group": "Цветочные",
-        "factory_detailed": "Givaudan"
-      }
-    },
-    {
-      "full_title": "Dolce&Gabbana The Only One (мотив), Givaudan Premium",
-      "brand": "Dolce&Gabbana",
-      "name": "The Only One",
-      "factory": "Givaudan Premium",
-      "article": "",
-      "url": "https://aroma-euro.ru/perfume/dolce-and-gabbana-the-only-one-motiv-givaudan-premium/",
-      "price": "30.00₽",
-      "unique_key": "dolce&gabbana|the only one|givaudan premium",
-      "details": {
-        "article": "",
-        "quality": "Premium",
-        "brand_detailed": "Dolce&Gabbana",
-        "gender": "Женский",
-        "fragrance_group": "Восточные, гурманские",
-        "factory_detailed": "Givaudan"
-      }
-    },
-    {
-      "full_title": "Hugo Boss Boss Bottled (мотив), Givaudan Premium",
-      "brand": "Hugo Boss",
-      "name": "Boss Bottled",
-      "factory": "Givaudan Premium",
-      "article": "",
-      "url": "https://aroma-euro.ru/perfume/hugo-boss-boss-bottled-motiv-givaudan-premium/",
-      "price": "30.00₽",
-      "unique_key": "hugo boss|boss bottled|givaudan premium",
-      "details": {
-        "article": "",
-        "quality": "Premium",
-        "brand_detailed": "Hugo Boss",
-        "gender": "Мужской",
-        "fragrance_group": "Древесные, пряные",
-        "factory_detailed": "Givaudan"
-      }
-    },
-    {
-      "full_title": "Hugo Boss Hugo (мотив), Lz 233830-B",
-      "brand": "Hugo Boss",
-      "name": "Hugo , Lz 233830-B",
-      "factory": "",
-      "article": "",
-      "url": "https://aroma-euro.ru/perfume/hugo-boss-hugo-luzi/",
-      "price": "14.00₽",
-      "unique_key": "hugo boss|hugo , lz 233830-b|",
-      "details": {
-        "article": "233830-B",
-        "quality": "",
-        "brand_detailed": "Hugo Boss",
-        "gender": "Мужской",
-        "fragrance_group": "Фужерные, зеленые",
-        "factory_detailed": "LZ AG"
-      }
-    },
-    {
-      "full_title": "Kilian I Don't Need A Prince By My Side To Be A Princess (мотив), Givaudan Premium",
-      "brand": "Kilian I",
-      "name": "Don't Need A Prince By My Side To Be A Princess",
-      "factory": "Givaudan Premium",
-      "article": "",
-      "url": "https://aroma-euro.ru/perfume/kilian-i-dont-need-a-prince-by-my-side-to-be-a-princess-motiv-givaudan-premium/",
-      "price": "30.00₽",
-      "unique_key": "kilian i|don't need a prince by my side to be a princess|givaudan premium",
-      "details": {
-        "article": "",
-        "quality": "Premium",
-        "brand_detailed": "Kilian",
-        "gender": "Унисекс",
-        "fragrance_group": "Восточные, гурманские",
-        "factory_detailed": "Givaudan"
-      }
-    },
-    {
-      "full_title": "Xerjoff Sospiro Erba Pura (мотив), Givaudan Premium",
-      "brand": "Xerjoff Sospiro",
-      "name": "Erba Pura",
-      "factory": "Givaudan Premium",
-      "article": "",
-      "url": "https://aroma-euro.ru/perfume/xerjoff-sospiro-erba-pura-motiv-givaudan-premium/",
-      "price": "35.00₽",
-      "unique_key": "xerjoff sospiro|erba pura|givaudan premium",
-      "details": {
-        "article": "",
-        "quality": "Premium",
-        "brand_detailed": "Xerjoff",
-        "gender": "Унисекс",
-        "fragrance_group": "Восточные",
-        "factory_detailed": "Givaudan"
-      }
-    },
-    {
-      "full_title": "Fantasia (фиолетовая), Hamidi",
-      "brand": "Fantasia (фиолетовая)",
-      "name": "(фиолетовая)",
-      "factory": "Hamidi",
-      "article": "",
-      "url": "https://aroma-euro.ru/perfume/fantasia-fioletovaya-hamidi/",
-      "price": "16.00₽",
-      "unique_key": "fantasia (фиолетовая)|(фиолетовая)|hamidi",
-      "details": {
-        "article": "",
-        "quality": "",
-        "brand_detailed": "Hamidi",
-        "gender": "",
-        "fragrance_group": "",
-        "factory_detailed": "Hamidi"
-      }
-    },
-    {
-      "full_title": "Essential Parfums - Bois Impérial (мотив), Givaudan Premium",
-      "brand": "Essential Parfums",
-      "name": "Bois Impérial",
-      "factory": "Givaudan Premium",
-      "article": "",
-      "url": "https://aroma-euro.ru/perfume/essential-parfums-bois-imperial-motiv-givaudan-premium/",
-      "price": "40.00₽",
-      "unique_key": "essential parfums|bois impérial|givaudan premium",
-      "details": {
-        "article": "",
-        "quality": "Premium",
-        "brand_detailed": "Essential Parfums",
-        "gender": "Унисекс",
-        "fragrance_group": "Фужерные",
-        "factory_detailed": "Givaudan"
-      }
-    },
-    {
-      "full_title": "Bvlgari Tygar (мотив), Givaudan Premium",
-      "brand": "Bvlgari Tygar",
-      "name": "Tygar",
-      "factory": "Givaudan Premium",
-      "article": "",
-      "url": "https://aroma-euro.ru/perfume/bvlgari-tygar-motiv-givaudan-premium/",
-      "price": "35.00₽",
-      "unique_key": "bvlgari tygar|tygar|givaudan premium",
-      "details": {
-        "article": "",
-        "quality": "Premium",
-        "brand_detailed": "Bvlgari",
-        "gender": "Мужской",
-        "fragrance_group": "Цитрусовые, фужерные",
-        "factory_detailed": "Givaudan"
-      }
-    },
-    {
-      "full_title": "Tom Ford Ombre Leather Eau De Parfum (мотив), Givaudan Premium",
-      "brand": "Tom Ford",
-      "name": "Ombre Leather Eau De Parfum",
-      "factory": "Givaudan Premium",
-      "article": "",
-      "url": "https://aroma-euro.ru/perfume/tom-ford-ombre-leather-eau-de-parfum-motiv-givaudan-premium/",
-      "price": "35.00₽",
-      "unique_key": "tom ford|ombre leather eau de parfum|givaudan premium",
-      "details": {
-        "article": "",
-        "quality": "Premium",
-        "brand_detailed": "Tom Ford",
-        "gender": "Унисекс",
-        "fragrance_group": "Кожаные",
-        "factory_detailed": "Givaudan"
-      }
-    },
-    {
-      "full_title": "Louis Vuitton L’Immensite (мотив), Givaudan Premium",
-      "brand": "Louis Vuitton",
-      "name": "L’Immensite",
-      "factory": "Givaudan Premium",
-      "article": "",
-      "url": "https://aroma-euro.ru/perfume/louis-vuitton-limmensite-motiv-givaudan-premium/",
-      "price": "40.00₽",
-      "unique_key": "louis vuitton|l’immensite|givaudan premium",
-      "details": {
-        "article": "",
-        "quality": "Premium",
-        "brand_detailed": "Louis Vuitton",
-        "gender": "Мужской",
-        "fragrance_group": "Восточные, пряные",
-        "factory_detailed": "Givaudan"
-      }
-    },
-    {
-      "full_title": "Byredo Marijuana (мотив), Lz 353110",
-      "brand": "Byredo",
-      "name": "Marijuana",
-      "factory": "Lz",
-      "article": "353110",
-      "url": "https://aroma-euro.ru/perfume/byredo-marijuana-motiv-luzi-353110/",
-      "price": "20.00₽",
-      "unique_key": "byredo|marijuana|lz",
-      "details": {
-        "article": "",
-        "quality": "353110",
-        "brand_detailed": "Byredo",
-        "gender": "Унисекс",
-        "fragrance_group": "Водяные, зеленые",
         "factory_detailed": "LZ AG"
       }
     }
