@@ -99,7 +99,26 @@ class OpenRouterClient:
                         if response.status == 200:
                             try:
                                 data = json.loads(response_text)
-                                content = data['choices'][0]['message']['content']
+                                logger.info(f"🔍 Полученные данные API: {data}")
+                                
+                                # Проверяем разные форматы ответа
+                                content = None
+                                if 'choices' in data and len(data['choices']) > 0:
+                                    content = data['choices'][0]['message']['content']
+                                elif 'message' in data:
+                                    content = data['message']['content']
+                                elif 'content' in data:
+                                    content = data['content']
+                                elif 'text' in data:
+                                    content = data['text']
+                                else:
+                                    logger.error(f"❌ Неожиданная структура ответа: {list(data.keys())}")
+                                    return APIResponse(
+                                        success=False,
+                                        error=f"Неожиданная структура ответа API: {list(data.keys())}",
+                                        status_code=response.status
+                                    )
+                                
                                 usage = data.get('usage', {})
                                 
                                 logger.info(f"✅ API успешно: {len(content)} символов, токены: {usage}")
@@ -114,6 +133,7 @@ class OpenRouterClient:
                             except (KeyError, json.JSONDecodeError) as e:
                                 error_msg = f"Ошибка парсинга ответа API: {e}"
                                 logger.error(f"❌ {error_msg}")
+                                logger.error(f"❌ Сырой ответ: {response_text[:500]}")
                                 return APIResponse(
                                     success=False,
                                     error=error_msg,
