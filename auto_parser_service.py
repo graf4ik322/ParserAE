@@ -19,11 +19,21 @@ from complete_parser_with_details import CompleteParfumeParser
 from data_normalizer import PerfumeDataNormalizer
 
 # Настройка логирования
+import os
+from pathlib import Path
+
+# Создаем директорию для логов если не существует
+log_dir = Path('/app/logs')
+log_dir.mkdir(exist_ok=True)
+
+# Используем файл в директории logs вместо корневой
+log_file = log_dir / 'auto_parser.log'
+
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler('auto_parser.log', encoding='utf-8'),
+        logging.FileHandler(log_file, encoding='utf-8'),
         logging.StreamHandler()
     ]
 )
