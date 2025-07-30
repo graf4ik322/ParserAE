@@ -16,7 +16,7 @@ from telegram.ext import (
 )
 
 # Импорты наших модулей
-from config import BOT_TOKEN, OPENROUTER_API_KEY, OPENROUTER_CONFIG, DATA_FILES, LLM_LIMITS
+from config import BOT_TOKEN, OPENROUTER_API_KEY, OPENROUTER_CONFIG, DATA_FILES, LLM_LIMITS, ADMIN_USER_ID
 from quiz_system import PerfumeQuizSystem, create_quiz_system
 from ai_prompts import AIPrompts, PromptLimits
 
@@ -226,6 +226,55 @@ class PerfumeConsultantBot:
                     break
         
         return perfume_names
+
+    def _is_admin(self, user_id: int) -> bool:
+        """Проверяет, является ли пользователь админом"""
+        return user_id == ADMIN_USER_ID and ADMIN_USER_ID != 0
+
+    def _get_admin_keyboard(self) -> InlineKeyboardMarkup:
+        """Создает клавиатуру с админскими функциями"""
+        keyboard = [
+            [
+                InlineKeyboardButton("📊 Статистика", callback_data="admin_stats"),
+                InlineKeyboardButton("💰 Баланс API", callback_data="admin_balance")
+            ],
+            [
+                InlineKeyboardButton("🏭 Анализ фабрик", callback_data="admin_factory_analysis"),
+                InlineKeyboardButton("👥 Пользователи", callback_data="admin_users")
+            ],
+            [
+                InlineKeyboardButton("🔙 Назад в меню", callback_data="main_menu")
+            ]
+        ]
+        return InlineKeyboardMarkup(keyboard)
+
+    async def _show_admin_menu(self, query_or_update) -> None:
+        """Показывает админское меню"""
+        text = (
+            "🔧 <b>Панель администратора</b>\n\n"
+            "Добро пожаловать в админскую панель!\n\n"
+            "📊 <b>Доступные функции:</b>\n"
+            "• <b>Статистика</b> - детальная статистика базы данных\n"
+            "• <b>Баланс API</b> - информация об использовании OpenRouter\n"
+            "• <b>Анализ фабрик</b> - подробный анализ производителей\n"
+            "• <b>Пользователи</b> - статистика активности пользователей\n\n"
+            "Выберите нужную функцию:"
+        )
+        
+        keyboard = self._get_admin_keyboard()
+        
+        if hasattr(query_or_update, 'edit_message_text'):
+            await query_or_update.edit_message_text(
+                text=text,
+                reply_markup=keyboard,
+                parse_mode='HTML'
+            )
+        else:
+            await query_or_update.message.reply_text(
+                text=text,
+                reply_markup=keyboard,
+                parse_mode='HTML'
+            )
     
     def get_user_session(self, user_id: int) -> UserSession:
         """Получает или создает сессию пользователя"""
@@ -235,6 +284,10 @@ class PerfumeConsultantBot:
     
     async def send_main_menu(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         """Отправляет главное меню"""
+        user_id = update.effective_user.id
+        is_admin = self._is_admin(user_id)
+        
+        # Основные функции для всех пользователей
         keyboard = [
             [
                 InlineKeyboardButton("🤔 Парфюмерный вопрос", callback_data="perfume_question"),
@@ -242,34 +295,40 @@ class PerfumeConsultantBot:
             ],
             [
                 InlineKeyboardButton("📖 Что за аромат?", callback_data="fragrance_info"),
-                InlineKeyboardButton("📊 Статистика", callback_data="stats")
-            ],
-            [
-                InlineKeyboardButton("🏭 Анализ фабрик", callback_data="factory_analysis"),
-                InlineKeyboardButton("💰 Баланс API", callback_data="api_balance")
-            ],
-            [
                 InlineKeyboardButton("❓ Помощь", callback_data="help")
             ]
         ]
+        
+        # Добавляем админскую кнопку только для админа
+        if is_admin:
+            keyboard.append([
+                InlineKeyboardButton("🔧 Админ-панель", callback_data="admin_menu")
+            ])
         reply_markup = InlineKeyboardMarkup(keyboard)
         
         stats = self._get_database_stats()
         
-        text = (
+        user_id = update.effective_user.id
+        is_admin = self._is_admin(user_id)
+        
+        base_text = (
             "🌟 <b>Парфюмерный консультант</b>\n\n"
             "Добро пожаловать! Я ваш персональный ИИ-консультант по парфюмерии.\n\n"
             "🎯 <b>Мои возможности:</b>\n"
             "• Отвечаю на любые вопросы о парфюмерии\n"
             "• Подбираю идеальные ароматы по вашим предпочтениям\n"
             "• Даю подробную информацию об ароматах\n"
-            "• Анализирую фабрики и качество продукции\n\n"
+            "• Добавляю прямые ссылки на товары для заказа\n\n"
             f"📚 <b>База данных:</b>\n"
             f"• Ароматов: <b>{stats['total_perfumes']}</b>\n"
             f"• Брендов: <b>{stats['total_brands']}</b>\n"
             f"• Фабрик: <b>{stats['total_factories']}</b>\n\n"
-            "Выберите нужную функцию:"
         )
+        
+        if is_admin:
+            text = base_text + "🔧 <b>Админ-панель доступна</b>\n\nВыберите нужную функцию:"
+        else:
+            text = base_text + "Выберите нужную функцию:"
         
         if update.callback_query:
             await update.callback_query.edit_message_text(
@@ -720,10 +779,6 @@ class PerfumeConsultantBot:
         elif data == "fragrance_info":
             return await self.handle_fragrance_info(update, context)
         
-        elif data == "api_balance":
-            await self._show_api_balance(query)
-            return BotState.MAIN_MENU.value
-        
         elif data.startswith("quiz_"):
             # Обработка ответов квиза
             parts = data.split("_", 2)
@@ -735,16 +790,43 @@ class PerfumeConsultantBot:
                 await self._send_quiz_question(query, user_session)
             return BotState.QUIZ_IN_PROGRESS.value
         
-        elif data == "stats":
-            await self._show_statistics(query)
-            return BotState.MAIN_MENU.value
-        
-        elif data == "factory_analysis":
-            await self._show_factory_analysis(query)
-            return BotState.MAIN_MENU.value
-        
         elif data == "help":
             await self._show_help(query)
+            return BotState.MAIN_MENU.value
+        
+        elif data == "admin_menu":
+            if self._is_admin(update.effective_user.id):
+                await self._show_admin_menu(query)
+            else:
+                await query.answer("❌ Доступ запрещен. Только для администраторов.")
+            return BotState.MAIN_MENU.value
+        
+        elif data == "admin_stats":
+            if self._is_admin(update.effective_user.id):
+                await self._show_statistics(query)
+            else:
+                await query.answer("❌ Доступ запрещен. Только для администраторов.")
+            return BotState.MAIN_MENU.value
+        
+        elif data == "admin_balance":
+            if self._is_admin(update.effective_user.id):
+                await self._show_api_balance(query)
+            else:
+                await query.answer("❌ Доступ запрещен. Только для администраторов.")
+            return BotState.MAIN_MENU.value
+        
+        elif data == "admin_factory_analysis":
+            if self._is_admin(update.effective_user.id):
+                await self._show_factory_analysis(query)
+            else:
+                await query.answer("❌ Доступ запрещен. Только для администраторов.")
+            return BotState.MAIN_MENU.value
+        
+        elif data == "admin_users":
+            if self._is_admin(update.effective_user.id):
+                await self._show_user_statistics(query)
+            else:
+                await query.answer("❌ Доступ запрещен. Только для администраторов.")
             return BotState.MAIN_MENU.value
         
         return BotState.MAIN_MENU.value
@@ -771,7 +853,7 @@ class PerfumeConsultantBot:
         
         text += f"\n💡 <i>Все данные актуальны и готовы для консультаций!</i>"
         
-        keyboard = [[InlineKeyboardButton("🔙 Главное меню", callback_data="main_menu")]]
+        keyboard = [[InlineKeyboardButton("🔙 Админ-панель", callback_data="admin_menu")]]
         reply_markup = InlineKeyboardMarkup(keyboard)
         
         await query.edit_message_text(
@@ -838,7 +920,7 @@ class PerfumeConsultantBot:
             "💡 <i>Все рекомендации основаны на реальных данных из парсинга aroma-euro.ru</i>"
         )
         
-        keyboard = [[InlineKeyboardButton("🔙 Главное меню", callback_data="main_menu")]]
+        keyboard = [[InlineKeyboardButton("🔙 Админ-панель", callback_data="admin_menu")]]
         reply_markup = InlineKeyboardMarkup(keyboard)
         
         await query.edit_message_text(
@@ -898,7 +980,7 @@ class PerfumeConsultantBot:
                         balance_text += f"[OpenRouter Dashboard](https://openrouter.ai/keys)\n\n"
                         balance_text += "💡 <i>Для точного баланса используйте панель управления OpenRouter</i>"
             
-            keyboard = [[InlineKeyboardButton("🔙 Главное меню", callback_data="main_menu")]]
+            keyboard = [[InlineKeyboardButton("🔙 Админ-панель", callback_data="admin_menu")]]
             reply_markup = InlineKeyboardMarkup(keyboard)
             
             await query.edit_message_text(
@@ -922,13 +1004,61 @@ class PerfumeConsultantBot:
                 f"💡 <i>Рекомендуемый месячный бюджет: $5-15</i>\n\n"
                 f"⚠️ <i>Не удалось получить данные API. Проверьте панель управления.</i>"
             )
-            keyboard = [[InlineKeyboardButton("🔙 Главное меню", callback_data="main_menu")]]
+            keyboard = [[InlineKeyboardButton("🔙 Админ-панель", callback_data="admin_menu")]]
             reply_markup = InlineKeyboardMarkup(keyboard)
             await query.edit_message_text(
                 text=error_text,
                 reply_markup=reply_markup,
                 parse_mode='HTML',
                 disable_web_page_preview=True
+            )
+    
+    async def _show_user_statistics(self, query) -> None:
+        """Показывает статистику пользователей (только для админа)"""
+        try:
+            total_users = len(self.user_sessions)
+            active_sessions = sum(1 for session in self.user_sessions.values() 
+                                if session.current_state != BotState.MAIN_MENU)
+            
+            # Статистика по состояниям
+            state_stats = {}
+            for session in self.user_sessions.values():
+                state = session.current_state.name if hasattr(session.current_state, 'name') else str(session.current_state)
+                state_stats[state] = state_stats.get(state, 0) + 1
+            
+            stats_text = f"👥 <b>Статистика пользователей:</b>\n\n"
+            stats_text += f"📊 <b>Общая статистика:</b>\n"
+            stats_text += f"• Всего пользователей: <b>{total_users}</b>\n"
+            stats_text += f"• Активных сессий: <b>{active_sessions}</b>\n\n"
+            
+            if state_stats:
+                stats_text += f"📈 <b>По состояниям:</b>\n"
+                for state, count in state_stats.items():
+                    stats_text += f"• {state}: <b>{count}</b>\n"
+            
+            stats_text += f"\n💡 <i>Статистика обновляется в реальном времени</i>"
+            
+            keyboard = [[InlineKeyboardButton("🔙 Админ-панель", callback_data="admin_menu")]]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            
+            await query.edit_message_text(
+                text=stats_text,
+                reply_markup=reply_markup,
+                parse_mode='HTML'
+            )
+            
+        except Exception as e:
+            logger.error(f"Ошибка при получении статистики пользователей: {e}")
+            error_text = (
+                "❌ <b>Ошибка при получении статистики пользователей</b>\n\n"
+                "Произошла техническая ошибка. Попробуйте позже."
+            )
+            keyboard = [[InlineKeyboardButton("🔙 Админ-панель", callback_data="admin_menu")]]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            await query.edit_message_text(
+                text=error_text,
+                reply_markup=reply_markup,
+                parse_mode='HTML'
             )
     
     def create_application(self) -> Application:

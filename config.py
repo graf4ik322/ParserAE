@@ -13,6 +13,9 @@ BOT_TOKEN = os.getenv('BOT_TOKEN', 'YOUR_BOT_TOKEN_HERE')
 # OpenRouter API Key  
 OPENROUTER_API_KEY = os.getenv('OPENROUTER_API_KEY', 'YOUR_OPENROUTER_API_KEY_HERE')
 
+# Admin User ID (получить можно через @userinfobot)
+ADMIN_USER_ID = int(os.getenv('ADMIN_USER_ID', '0'))  # Замените на ваш Telegram User ID
+
 # Настройки OpenRouter
 OPENROUTER_CONFIG = {
     'base_url': 'https://openrouter.ai/api/v1/chat/completions',
