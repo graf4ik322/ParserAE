@@ -29,14 +29,26 @@ log_dir.mkdir(exist_ok=True)
 # Используем файл в директории logs вместо корневой
 log_file = log_dir / 'auto_parser.log'
 
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler(log_file, encoding='utf-8'),
-        logging.StreamHandler()
-    ]
-)
+# Пытаемся создать лог файл или используем только консоль
+try:
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        handlers=[
+            logging.FileHandler(log_file, encoding='utf-8'),
+            logging.StreamHandler()
+        ]
+    )
+except PermissionError:
+    # Если нет прав на запись, используем только консоль
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        handlers=[
+            logging.StreamHandler()
+        ]
+    )
+    print(f"WARNING: Cannot write to {log_file}, using console logging only")
 logger = logging.getLogger(__name__)
 
 class AutoParserService:

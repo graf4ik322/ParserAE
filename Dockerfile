@@ -22,11 +22,8 @@ RUN pip install --no-cache-dir -r bot_requirements.txt
 # Копируем исходный код приложения
 COPY . .
 
-# Создаем директории для логов
-RUN mkdir -p /app/logs && chown -R perfumebot:perfumebot /app/logs
-
-# Устанавливаем права на файлы
-RUN chown -R perfumebot:perfumebot /app
+# Создаем директории для логов и устанавливаем права на файлы
+RUN mkdir -p /app/logs && chown -R perfumebot:perfumebot /app
 
 # Переключаемся на непривилегированного пользователя
 USER perfumebot
