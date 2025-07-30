@@ -4,6 +4,12 @@
 # Копируем полный парсер, но убираем ограничение на количество товаров для извлечения деталей
 from complete_parser_with_details import CompleteParfumeParser
 import json
+import time
+import logging
+import concurrent.futures
+from typing import List, Dict
+
+logger = logging.getLogger(__name__)
 
 class FullCatalogParser(CompleteParfumeParser):
     """Полная версия парсера без ограничений на количество товаров"""
