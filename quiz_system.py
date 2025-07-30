@@ -7,11 +7,11 @@ from enum import Enum
 
 class QuizCategory(Enum):
     """Категории вопросов квиза"""
-    BASIC_INFO = "basic_info"
-    PREFERENCES = "preferences"
-    LIFESTYLE = "lifestyle"
-    OCCASIONS = "occasions"
-    EXPERIENCE = "experience"
+    BASIC_PROFILE = "basic_profile"
+    PSYCHOLOGICAL_TYPE = "psychological_type"
+    SCENT_PREFERENCES = "scent_preferences"
+    USAGE_CONTEXT = "usage_context"
+    PERSONAL_STYLE = "personal_style"
 
 @dataclass
 class QuizQuestion:
@@ -25,204 +25,202 @@ class QuizQuestion:
     depends_on: Optional[str] = None
 
 class PerfumeQuizSystem:
-    """Система квиза для подбора парфюмов"""
+    """Улучшенная система квиза для максимально точного подбора парфюмов"""
     
     def __init__(self):
-        self.questions = self._create_quiz_questions()
+        self.questions = self._create_enhanced_quiz_questions()
         self.question_flow = self._create_question_flow()
     
-    def _create_quiz_questions(self) -> List[QuizQuestion]:
-        """Создает все вопросы квиза"""
+    def _create_enhanced_quiz_questions(self) -> List[QuizQuestion]:
+        """Создает научно обоснованные вопросы для точного профилирования"""
         return [
-            # Базовая информация
+            # Базовый профиль
             QuizQuestion(
-                id="gender",
-                category=QuizCategory.BASIC_INFO,
+                id="target_person",
+                category=QuizCategory.BASIC_PROFILE,
                 text="👤 Для кого подбираем аромат?",
                 options=[
-                    "Для мужчины", 
-                    "Для женщины", 
-                    "Унисекс (универсальный)", 
-                    "Не важно"
+                    "Для себя (женщина)", 
+                    "Для себя (мужчина)", 
+                    "Для партнера/партнерши",
+                    "Универсальный подарок"
                 ],
-                key="target_gender",
+                key="target_person",
                 weight=2.0
             ),
             
             QuizQuestion(
-                id="age_group",
-                category=QuizCategory.BASIC_INFO,
-                text="🎂 Возрастная группа?",
+                id="age_personality",
+                category=QuizCategory.BASIC_PROFILE,
+                text="🎭 Как бы вы описали свой характер?",
                 options=[
-                    "18-25 лет (молодежный)", 
-                    "25-35 лет (активный)", 
-                    "35-50 лет (зрелый)", 
-                    "50+ лет (элегантный)"
+                    "Энергичный и современный", 
+                    "Элегантный и утонченный", 
+                    "Загадочный и чувственный",
+                    "Спокойный и гармоничный"
                 ],
-                key="age_group",
-                weight=1.5
+                key="personality_type",
+                weight=2.5
             ),
             
-            # Предпочтения по ароматам
+            # Психологический тип (на основе исследования Mintel)
             QuizQuestion(
-                id="fragrance_family",
-                category=QuizCategory.PREFERENCES,
-                text="🌸 Какие ароматы вам нравятся?",
+                id="fragrance_motivation",
+                category=QuizCategory.PSYCHOLOGICAL_TYPE,
+                text="🧠 Что для вас главное в аромате?",
                 options=[
-                    "Цветочные (роза, жасмин, пион)",
-                    "Цитрусовые (лимон, апельсин, грейпфрут)",
-                    "Древесные (сандал, кедр, пачули)",
-                    "Восточные (ваниль, амбра, мускус)",
-                    "Свежие (морские, зеленые)",
-                    "Фруктовые (ягоды, персик, яблоко)",
-                    "Не знаю, помогите выбрать"
+                    "Расслабление и эмоциональное благополучие",
+                    "Безопасность и натуральность",
+                    "Уникальность и приключения",
+                    "Уверенность и привлекательность"
                 ],
-                key="fragrance_family",
+                key="consumer_type",
+                weight=3.0
+            ),
+            
+            QuizQuestion(
+                id="scent_discovery",
+                category=QuizCategory.PSYCHOLOGICAL_TYPE,
+                text="🌟 Как вы относитесь к новым ароматам?",
+                options=[
+                    "Обожаю экспериментировать с новинками",
+                    "Предпочитаю проверенную классику",
+                    "Выбираю по настроению",
+                    "Доверяю рекомендациям экспертов"
+                ],
+                key="innovation_attitude",
+                weight=2.0
+            ),
+            
+            # Предпочтения по ароматам (улучшенная версия)
+            QuizQuestion(
+                id="scent_family_detailed",
+                category=QuizCategory.SCENT_PREFERENCES,
+                text="🌺 Какие ароматы вызывают у вас приятные ассоциации?",
+                options=[
+                    "Свежесть утреннего сада (цветочные, зеленые)",
+                    "Тепло домашнего уюта (ваниль, амбра, мускус)",
+                    "Энергия цитрусового лета (лимон, грейпфрут, мята)",
+                    "Благородство дерева (сандал, кедр, ветивер)",
+                    "Экзотика пряностей (корица, кардамон, перец)",
+                    "Морская свежесть (озон, соль, водоросли)"
+                ],
+                key="scent_family",
+                weight=3.0
+            ),
+            
+            QuizQuestion(
+                id="scent_intensity",
+                category=QuizCategory.SCENT_PREFERENCES,
+                text="💨 Какой должна быть интенсивность аромата?",
+                options=[
+                    "Деликатная - только для меня",
+                    "Умеренная - приятный шлейф",
+                    "Заметная - чтобы запомнились",
+                    "Интенсивная - яркое заявление"
+                ],
+                key="intensity_preference",
                 weight=2.5
             ),
             
             QuizQuestion(
-                id="intensity",
-                category=QuizCategory.PREFERENCES,
-                text="💪 Интенсивность аромата?",
+                id="longevity_importance",
+                category=QuizCategory.SCENT_PREFERENCES,
+                text="⏰ Насколько важна стойкость аромата?",
                 options=[
-                    "Легкий, едва заметный",
-                    "Умеренный, приятный шлейф",
-                    "Насыщенный, яркий",
-                    "Очень интенсивный, стойкий"
+                    "Критично важна (8+ часов)",
+                    "Важна (4-6 часов)",
+                    "Умеренно важна (2-4 часа)",
+                    "Не принципиально"
                 ],
-                key="intensity",
+                key="longevity_need",
                 weight=2.0
             ),
             
-            # Образ жизни
+            # Контекст использования (оптимизированный)
             QuizQuestion(
-                id="lifestyle",
-                category=QuizCategory.LIFESTYLE,
-                text="🏃‍♂️ Ваш образ жизни?",
+                id="primary_usage",
+                category=QuizCategory.USAGE_CONTEXT,
+                text="🎯 В каких ситуациях будете использовать аромат чаще всего?",
                 options=[
-                    "Активный, спортивный",
-                    "Деловой, офисный",
-                    "Творческий, свободный",
-                    "Домашний, спокойный"
+                    "Ежедневно на работе/учебе",
+                    "Для особых случаев и мероприятий",
+                    "На свиданиях и романтических встречах",
+                    "Для личного удовольствия дома",
+                    "В спортзале и активном отдыхе"
                 ],
-                key="lifestyle",
+                key="usage_context",
+                weight=2.5
+            ),
+            
+            QuizQuestion(
+                id="seasonal_preference",
+                category=QuizCategory.USAGE_CONTEXT,
+                text="🌡️ Когда планируете использовать аромат?",
+                options=[
+                    "Круглый год",
+                    "Весна-лето (свежие, легкие)",
+                    "Осень-зима (теплые, насыщенные)",
+                    "По настроению"
+                ],
+                key="seasonal_usage",
                 weight=1.5
             ),
             
+            # Личный стиль
             QuizQuestion(
-                id="season",
-                category=QuizCategory.OCCASIONS,
-                text="🌡️ Для какого сезона?",
+                id="style_association",
+                category=QuizCategory.PERSONAL_STYLE,
+                text="👗 Ваш стиль в одежде ближе к:",
                 options=[
-                    "Весна (свежие, цветочные)",
-                    "Лето (легкие, цитрусовые)",
-                    "Осень (теплые, пряные)",
-                    "Зима (насыщенные, уютные)",
-                    "Универсальный (круглый год)"
+                    "Классический и элегантный",
+                    "Современный и минималистичный",
+                    "Яркий и творческий",
+                    "Удобный и практичный",
+                    "Романтичный и женственный"
                 ],
-                key="season",
-                weight=1.8
+                key="style_preference",
+                weight=2.0
             ),
             
             QuizQuestion(
-                id="time_of_day",
-                category=QuizCategory.OCCASIONS,
-                text="⏰ Время использования?",
+                id="social_impact",
+                category=QuizCategory.PERSONAL_STYLE,
+                text="👥 Как аромат должен влиять на окружающих?",
                 options=[
-                    "Утро/День (бодрящие)",
-                    "Вечер/Ночь (соблазнительные)",
-                    "Особые случаи (праздничные)",
-                    "Ежедневно (универсальные)"
+                    "Создавать атмосферу уюта и доверия",
+                    "Подчеркивать мою индивидуальность",
+                    "Привлекать внимание и интерес",
+                    "Оставаться незаметным для других"
                 ],
-                key="time_of_day",
-                weight=1.7
+                key="social_impact",
+                weight=2.0
             ),
             
             QuizQuestion(
-                id="occasion",
-                category=QuizCategory.OCCASIONS,
-                text="🎭 Основные поводы для использования?",
+                id="quality_priority",
+                category=QuizCategory.PERSONAL_STYLE,
+                text="⭐ Что для вас приоритетнее?",
                 options=[
-                    "Работа, офис",
-                    "Свидания, романтика",
-                    "Вечеринки, клубы",
-                    "Повседневная жизнь",
-                    "Особые события"
-                ],
-                key="occasion",
-                weight=1.6
-            ),
-            
-            # Опыт с парфюмерией
-            QuizQuestion(
-                id="experience",
-                category=QuizCategory.EXPERIENCE,
-                text="🎓 Ваш опыт с парфюмерией?",
-                options=[
-                    "Новичок, только начинаю",
-                    "Иногда покупаю ароматы",
-                    "Разбираюсь в парфюмерии",
-                    "Эксперт, коллекционер"
-                ],
-                key="experience_level",
-                weight=1.2
-            ),
-            
-            QuizQuestion(
-                id="longevity",
-                category=QuizCategory.PREFERENCES,
-                text="⏱️ Важна ли стойкость аромата?",
-                options=[
-                    "Очень важна (8+ часов)",
-                    "Важна (4-6 часов)",
-                    "Умеренно важна (2-4 часа)",
-                    "Не важна, главное аромат"
-                ],
-                key="longevity",
-                weight=1.8
-            ),
-            
-            # Дополнительные предпочтения
-            QuizQuestion(
-                id="quality_preference",
-                category=QuizCategory.PREFERENCES,
-                text="⭐ Что важнее?",
-                options=[
-                    "Качество исполнения",
-                    "Оригинальность аромата",
-                    "Узнаваемость бренда",
+                    "Уникальность и редкость аромата",
+                    "Качество исполнения и стойкость",
+                    "Натуральность ингредиентов",
                     "Соотношение цена/качество"
                 ],
-                key="quality_preference",
-                weight=1.4
-            ),
-            
-            QuizQuestion(
-                id="factory_preference",
-                category=QuizCategory.EXPERIENCE,
-                text="🏭 Есть предпочтения по фабрикам?",
-                options=[
-                    "Givaudan (премиум качество)",
-                    "LZ (широкий выбор)",
-                    "Argeville (классика)",
-                    "SELUZ (эксклюзив)",
-                    "Не важно, любая"
-                ],
-                key="factory_preference",
-                weight=1.1
+                key="quality_focus",
+                weight=1.8
             )
         ]
     
     def _create_question_flow(self) -> Dict[str, List[str]]:
         """Создает логику потока вопросов"""
         return {
-            "start": ["gender", "age_group"],
-            "basic_complete": ["fragrance_family", "intensity"],
-            "preferences_complete": ["lifestyle", "season"],
-            "lifestyle_complete": ["time_of_day", "occasion"],
-            "occasions_complete": ["experience", "longevity"],
-            "experience_complete": ["quality_preference", "factory_preference"],
+            "start": ["target_person", "age_personality"],
+            "profile_complete": ["fragrance_motivation", "scent_discovery"],
+            "psychology_complete": ["scent_family_detailed", "scent_intensity"],
+            "scent_preferences_complete": ["longevity_importance", "primary_usage"],
+            "usage_complete": ["seasonal_preference", "style_association"],
+            "style_complete": ["social_impact", "quality_priority"],
             "end": []
         }
     
@@ -239,48 +237,68 @@ class PerfumeQuizSystem:
         return len(self.questions)
     
     def analyze_answers(self, answers: Dict[str, str]) -> Dict[str, Any]:
-        """Анализирует ответы и создает профиль предпочтений"""
+        """Анализирует ответы и создает детальный профиль предпочтений"""
         profile = {
-            "target_audience": self._analyze_target_audience(answers),
-            "fragrance_preferences": self._analyze_fragrance_preferences(answers),
+            "basic_profile": self._analyze_basic_profile(answers),
+            "psychological_type": self._analyze_psychological_type(answers),
+            "scent_preferences": self._analyze_scent_preferences(answers),
             "usage_context": self._analyze_usage_context(answers),
-            "quality_requirements": self._analyze_quality_requirements(answers),
-            "weighted_preferences": self._calculate_weighted_preferences(answers)
+            "personal_style": self._analyze_personal_style(answers),
+            "weighted_preferences": self._calculate_weighted_preferences(answers),
+            "consumer_archetype": self._determine_consumer_archetype(answers)
         }
         
         return profile
     
-    def _analyze_target_audience(self, answers: Dict[str, str]) -> Dict[str, str]:
-        """Анализирует целевую аудиторию"""
+    def _analyze_basic_profile(self, answers: Dict[str, str]) -> Dict[str, str]:
+        """Анализирует базовый профиль"""
         return {
-            "gender": answers.get("target_gender", "Не указано"),
-            "age_group": answers.get("age_group", "Не указано"),
-            "lifestyle": answers.get("lifestyle", "Не указано")
+            "target": answers.get("target_person", "Не указано"),
+            "personality": answers.get("personality_type", "Не указано")
         }
     
-    def _analyze_fragrance_preferences(self, answers: Dict[str, str]) -> Dict[str, str]:
+    def _analyze_psychological_type(self, answers: Dict[str, str]) -> Dict[str, str]:
+        """Анализирует психологический тип потребителя"""
+        return {
+            "motivation": answers.get("consumer_type", "Не указано"),
+            "innovation_attitude": answers.get("innovation_attitude", "Не указано")
+        }
+    
+    def _analyze_scent_preferences(self, answers: Dict[str, str]) -> Dict[str, str]:
         """Анализирует предпочтения по ароматам"""
         return {
-            "family": answers.get("fragrance_family", "Не указано"),
-            "intensity": answers.get("intensity", "Не указано"),
-            "quality_focus": answers.get("quality_preference", "Не указано")
+            "family": answers.get("scent_family", "Не указано"),
+            "intensity": answers.get("intensity_preference", "Не указано"),
+            "longevity": answers.get("longevity_need", "Не указано")
         }
     
     def _analyze_usage_context(self, answers: Dict[str, str]) -> Dict[str, str]:
         """Анализирует контекст использования"""
         return {
-            "season": answers.get("season", "Не указано"),
-            "time": answers.get("time_of_day", "Не указано"),
-            "occasion": answers.get("occasion", "Не указано")
+            "primary_usage": answers.get("usage_context", "Не указано"),
+            "seasonal": answers.get("seasonal_usage", "Не указано")
         }
     
-    def _analyze_quality_requirements(self, answers: Dict[str, str]) -> Dict[str, str]:
-        """Анализирует требования к качеству"""
+    def _analyze_personal_style(self, answers: Dict[str, str]) -> Dict[str, str]:
+        """Анализирует личный стиль"""
         return {
-            "longevity": answers.get("longevity", "Не указано"),
-            "experience": answers.get("experience_level", "Не указано"),
-            "factory": answers.get("factory_preference", "Не указано")
+            "style": answers.get("style_preference", "Не указано"),
+            "social_impact": answers.get("social_impact", "Не указано"),
+            "quality_focus": answers.get("quality_focus", "Не указано")
         }
+    
+    def _determine_consumer_archetype(self, answers: Dict[str, str]) -> str:
+        """Определяет архетип потребителя на основе исследований"""
+        motivation = answers.get("consumer_type", "")
+        
+        if "расслабление" in motivation.lower():
+            return "Self-care Enthusiast"
+        elif "безопасность" in motivation.lower():
+            return "Safety Seeker"
+        elif "уникальность" in motivation.lower():
+            return "Escapist Consumer"
+        else:
+            return "Confidence Builder"
     
     def _calculate_weighted_preferences(self, answers: Dict[str, str]) -> Dict[str, float]:
         """Вычисляет взвешенные предпочтения"""
@@ -296,59 +314,55 @@ class PerfumeQuizSystem:
     def create_recommendation_prompt(self, profile: Dict[str, Any], 
                                    available_perfumes: List[str],
                                    factory_analysis: Dict[str, Any]) -> str:
-        """Создает промпт для рекомендаций на основе профиля"""
+        """Создает улучшенный промпт для рекомендаций на основе детального профиля"""
         
-        # Формируем описание профиля пользователя
-        target = profile["target_audience"]
-        preferences = profile["fragrance_preferences"]
-        context = profile["usage_context"]
-        quality = profile["quality_requirements"]
+        basic = profile.get("basic_profile", {})
+        psychology = profile.get("psychological_type", {})
+        scent_prefs = profile.get("scent_preferences", {})
+        usage = profile.get("usage_context", {})
+        style = profile.get("personal_style", {})
+        archetype = profile.get("consumer_archetype", "")
         
-        profile_description = f"""
-ПРОФИЛЬ ПОЛЬЗОВАТЕЛЯ:
-• Целевая аудитория: {target['gender']}, {target['age_group']}, {target['lifestyle']}
-• Предпочтения: {preferences['family']}, интенсивность {preferences['intensity']}
-• Контекст использования: {context['season']}, {context['time']}, для {context['occasion']}
-• Требования: бюджет {quality['budget']}, опыт {quality['experience']}, фабрика {quality['factory']}
-• Приоритет: {preferences['quality_focus']}
+        prompt = f"""
+Вы - эксперт-парфюмер с 20-летним опытом. Подберите 3-4 идеальных аромата на основе детального профиля клиента:
+
+ПРОФИЛЬ КЛИЕНТА:
+🎭 Личность: {basic.get('personality', 'не указано')}
+🧠 Тип потребителя: {archetype}
+🌺 Ароматические предпочтения: {scent_prefs.get('family', 'не указано')}
+💨 Интенсивность: {scent_prefs.get('intensity', 'не указано')}
+⏰ Стойкость: {scent_prefs.get('longevity', 'не указано')}
+🎯 Основное использование: {usage.get('primary_usage', 'не указано')}
+👗 Стиль: {style.get('style', 'не указано')}
+👥 Социальное влияние: {style.get('social_impact', 'не указано')}
+
+ТРЕБОВАНИЯ К ОТВЕТУ:
+1. Максимум 4 эмодзи в сообщении
+2. Блоки текста не более 6 строк
+3. Разделители между рекомендациями
+4. Прямые ссылки на товары
+5. Обоснование выбора для каждого аромата
+
+ФОРМАТ ОТВЕТА:
+🎯 **Персональные рекомендации**
+
+**1. [Название аромата] ([Фабрика])**
+Описание и обоснование выбора
+🛒 [Ссылка на товар]
+
+——————————————————
+
+**2. [Название аромата] ([Фабрика])**
+Описание и обоснование выбора
+🛒 [Ссылка на товар]
+
+Доступные ароматы: {str(available_perfumes[:50])}...
+
+Анализ фабрик: {str(factory_analysis)[:200]}...
 """
         
-        # Ограничиваем список ароматов
-        limited_perfumes = available_perfumes[:300]
-        
-        # Топ фабрик
-        top_factories = []
-        for factory, data in list(factory_analysis.items())[:8]:
-            top_factories.append(f"- {factory}: {data['perfume_count']} ароматов, качество: {', '.join(data.get('quality_levels', ['стандарт'])[:2])}")
-        
-        prompt = f"""Ты - эксперт-парфюмер и персональный консультант. Подбери идеальные ароматы для клиента.
-
-{profile_description}
-
-ДОСТУПНЫЕ АРОМАТЫ (бренд - название + фабрика):
-{chr(10).join(limited_perfumes)}
-
-АНАЛИЗ ФАБРИК:
-{chr(10).join(top_factories)}
-
-ЗАДАЧА:
-1. Выбери 5-7 ароматов, максимально соответствующих профилю клиента
-2. Расположи по приоритету (самый подходящий первым)
-3. Для каждого аромата объясни, почему он идеален для этого клиента
-4. Укажи лучшие фабрики для каждого типа аромата
-5. Дай персональные советы по использованию
-
-КРИТЕРИИ ОТБОРА:
-- Соответствие гендеру и возрасту
-- Подходящая группа ароматов
-- Правильная интенсивность
-- Уместность для сезона и времени
-- Соответствие бюджету и опыту
-
-Ответ должен быть персонализированным, подробным и практичным."""
-
         return prompt
 
 def create_quiz_system() -> PerfumeQuizSystem:
-    """Фабричная функция для создания системы квиза"""
+    """Создает экземпляр улучшенной системы квиза"""
     return PerfumeQuizSystem()
