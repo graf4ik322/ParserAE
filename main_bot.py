@@ -115,8 +115,14 @@ class PerfumeConsultantBot:
         """Форматирует текст для лучшей читаемости в Telegram"""
         import re
         
-        # Убираем лишние звездочки и заменяем на HTML теги
-        text = re.sub(r'\*\*(.*?)\*\*', r'<b>\1</b>', text)
+        # Убираем все ** без замены на теги, делаем название курсивом с эмодзи
+        text = re.sub(r'\*\*(.*?)\*\*', r'💎 <i>\1</i>', text)
+        
+        # Убираем одинарные звездочки
+        text = re.sub(r'\*([^*]+?)\*', r'\1', text)
+        
+        # Убираем квадратные скобки
+        text = re.sub(r'\[([^\]]+?)\]', r'\1', text)
         
         # Ограничиваем количество эмодзи
         emoji_count = len(re.findall(r'[\U0001F600-\U0001F64F\U0001F300-\U0001F5FF\U0001F680-\U0001F6FF\U0001F1E0-\U0001F1FF\U00002600-\U000027BF\U0001f900-\U0001f9ff\U0001f018-\U0001f270]', text))
@@ -201,6 +207,35 @@ class PerfumeConsultantBot:
         
         logger.info(f"✅ Создан словарь URL для {len(url_mapping)} ароматов")
         return url_mapping
+    
+    def _create_enhanced_perfume_list(self) -> List[str]:
+        """Создает расширенный список парфюмов с артикулами для ИИ"""
+        enhanced_list = []
+        
+        if 'full_catalog' in self.normalized_data:
+            perfumes = self.normalized_data['full_catalog'].get('perfumes', [])
+            
+            for perfume in perfumes:
+                brand = perfume.get('brand', '').strip()
+                name = perfume.get('name', '').strip()
+                factory = perfume.get('factory', '').strip()
+                article = perfume.get('article', '').strip()
+                
+                if brand and name:
+                    # Создаем строку с артикулом для лучшего поиска
+                    if article:
+                        enhanced_name = f"{brand} {name} ({factory}) [Артикул: {article}]"
+                    else:
+                        enhanced_name = f"{brand} {name} ({factory})"
+                    
+                    enhanced_list.append(enhanced_name)
+        
+        # Если полный каталог недоступен, используем базовый список
+        if not enhanced_list:
+            enhanced_list = self.normalized_data.get('brand_name_factory', [])
+        
+        logger.info(f"✅ Создан расширенный список для ИИ: {len(enhanced_list)} позиций")
+        return enhanced_list
 
     def _find_perfume_url(self, perfume_name: str) -> Optional[str]:
         """Находит URL для конкретного аромата с улучшенным поиском"""
@@ -269,6 +304,17 @@ class PerfumeConsultantBot:
             if unique_key and normalized_search in unique_key:
                 logger.info(f"✅ Найдено по unique_key: {perfume.get('url')}")
                 return perfume.get('url')
+        
+        # 7. Поиск по артикулу в ответе ИИ
+        import re
+        article_match = re.search(r'\[Артикул:\s*([^\]]+)\]', perfume_name)
+        if article_match:
+            article = article_match.group(1).strip()
+            for perfume in perfumes:
+                perfume_article = perfume.get('article', '').strip()
+                if perfume_article and perfume_article == article:
+                    logger.info(f"✅ Найдено по артикулу: {perfume.get('url')}")
+                    return perfume.get('url')
         
         logger.warning(f"❌ URL не найден для: '{perfume_name}'")
         return None
@@ -413,14 +459,10 @@ class PerfumeConsultantBot:
         
         # Основные функции для всех пользователей
         keyboard = [
-            [
-                InlineKeyboardButton("🤔 Парфюмерный вопрос", callback_data="perfume_question"),
-                InlineKeyboardButton("🎯 Подбор парфюма", callback_data="perfume_quiz")
-            ],
-            [
-                InlineKeyboardButton("📖 Что за аромат?", callback_data="fragrance_info"),
-                InlineKeyboardButton("❓ Помощь", callback_data="help")
-            ]
+            [InlineKeyboardButton("🤔 Парфюмерный вопрос", callback_data="perfume_question")],
+            [InlineKeyboardButton("🎯 Подбор парфюма", callback_data="perfume_quiz")],
+            [InlineKeyboardButton("📖 Что за аромат?", callback_data="fragrance_info")],
+            [InlineKeyboardButton("❓ Помощь", callback_data="help")]
         ]
         
         # Добавляем админскую кнопку только для админа
@@ -443,16 +485,9 @@ class PerfumeConsultantBot:
             "• Подбираю идеальные ароматы по вашим предпочтениям\n"
             "• Даю подробную информацию об ароматах\n"
             "• Добавляю прямые ссылки на товары для заказа\n\n"
-            f"📚 <b>База данных:</b>\n"
-            f"• Ароматов: <b>{stats['total_perfumes']}</b>\n"
-            f"• Брендов: <b>{stats['total_brands']}</b>\n"
-            f"• Фабрик: <b>{stats['total_factories']}</b>\n\n"
         )
         
-        if is_admin:
-            text = base_text + "🔧 <b>Админ-панель доступна</b>\n\nВыберите нужную функцию:"
-        else:
-            text = base_text + "Выберите нужную функцию:"
+        text = base_text + "Выберите нужную функцию:"
         
         if update.callback_query:
             await update.callback_query.edit_message_text(
@@ -698,8 +733,8 @@ class PerfumeConsultantBot:
             # Анализируем ответы квиза
             user_profile = self.quiz_system.analyze_answers(user_session.quiz_answers)
             
-            # Получаем данные для рекомендаций
-            brand_name_factory_list = self.normalized_data.get('brand_name_factory', [])
+            # Получаем данные для рекомендаций с артикулами
+            brand_name_factory_list = self._create_enhanced_perfume_list()
             factory_analysis = self.normalized_data.get('factory_analysis', {})
             
             # Создаем промпт для рекомендаций
@@ -1044,21 +1079,10 @@ class PerfumeConsultantBot:
             "Введите название любого аромата для получения подробной экспертной информации: описание, "
             "ноты, история создания, советы по использованию.\n\n"
             
-            "<b>📊 Статистика</b>\n"
-            "Актуальная информация о нашей базе данных: количество ароматов, брендов, фабрик.\n\n"
-            
-            "<b>🏭 Анализ фабрик</b>\n"
-            "Подробная информация о фабриках-производителях парфюмерных композиций.\n\n"
-            
-            "<b>🤖 Технологии:</b>\n"
-            "• База: 1200+ ароматов с детальной информацией\n"
-            "• ИИ: Claude 3 Haiku через OpenRouter\n"
-            "• Оптимизация: специальные промпты для экономии токенов\n\n"
-            
             "💡 <i>Все рекомендации основаны на реальных данных из парсинга aroma-euro.ru</i>"
         )
         
-        keyboard = [[InlineKeyboardButton("🔙 Админ-панель", callback_data="admin_menu")]]
+        keyboard = [[InlineKeyboardButton("🔙 Главное меню", callback_data="start")]]
         reply_markup = InlineKeyboardMarkup(keyboard)
         
         await query.edit_message_text(
@@ -1243,27 +1267,27 @@ def main():
     
     # Проверяем наличие токенов
     if BOT_TOKEN == "YOUR_BOT_TOKEN_HERE" or OPENROUTER_API_KEY == "YOUR_OPENROUTER_API_KEY_HERE":
-        print("❌ Ошибка: Необходимо настроить токены в файле .env")
-        print("📝 Скопируйте .env.example в .env и укажите ваши токены")
+        logger.error("❌ Ошибка: Необходимо настроить токены в файле .env")
+        logger.error("📝 Скопируйте .env.example в .env и укажите ваши токены")
         return
     
-    print("🚀 Запуск парфюмерного консультанта...")
-    print("📚 Загрузка базы данных...")
+    logger.info("🚀 Запуск парфюмерного консультанта...")
+    logger.info("📚 Загрузка базы данных...")
     
     try:
         bot = PerfumeConsultantBot(BOT_TOKEN, OPENROUTER_API_KEY)
         application = bot.create_application()
         
-        print("✅ Парфюмерный консультант готов к работе!")
-        print(f"📊 Загружено ароматов: {len(bot.normalized_data.get('full_data_compact', []))}")
-        print(f"🏭 Фабрик в базе: {len(bot.normalized_data.get('factory_analysis', {}))}")
-        print("🤖 ИИ-консультант активирован")
-        print("💬 Бот запущен и ожидает сообщений...")
+        logger.info("✅ Парфюмерный консультант готов к работе!")
+        logger.info(f"📊 Загружено ароматов: {len(bot.normalized_data.get('full_data_compact', []))}")
+        logger.info(f"🏭 Фабрик в базе: {len(bot.normalized_data.get('factory_analysis', {}))}")
+        logger.info("🤖 ИИ-консультант активирован")
+        logger.info("💬 Бот запущен и ожидает сообщений...")
         
         application.run_polling(allowed_updates=Update.ALL_TYPES)
         
     except Exception as e:
-        print(f"❌ Критическая ошибка при запуске: {e}")
+        logger.error(f"❌ Критическая ошибка при запуске: {e}")
         logger.error(f"Критическая ошибка: {e}")
 
 if __name__ == "__main__":
