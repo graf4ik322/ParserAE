@@ -1,3 +1,44 @@
+# Changelog
+
+## [1.4.0] - 2025-07-30 - Major Bug Fixes and Improvements
+
+### 🐛 Fixed
+- **Quiz Button Error**: Fixed `Button_data_invalid` error in quiz progression by implementing index-based callback data mapping system instead of using long option texts
+- **Quiz State Tracking**: Fixed users showing as "QUIZ_IN_PROGRESS" after completion - now properly resets state to MAIN_MENU
+- **Quiz Question Skipping**: Added proper error handling to prevent question skipping when callback mapping fails
+- **Direct Product Links**: Implemented direct product URL linking using full catalog data instead of generic site links
+
+### ✨ Enhanced
+- **Text Formatting**: Added comprehensive text formatting for better Telegram readability:
+  - Limited emojis to max 4-5 per message
+  - Automatic text block separation (max 6 lines per block)
+  - Proper separators between sections
+  - HTML formatting instead of markdown asterisks
+- **Configuration Management**: Moved all important settings from `config.py` to `.env` file for better deployment management
+- **Quiz Questions**: Replaced budget question with longevity preference question for better user experience
+
+### 🏗️ Technical Improvements
+- Added callback data mapping system in user sessions
+- Improved perfume URL finding algorithm using full catalog data
+- Enhanced logging for quiz progression debugging
+- Better error handling in quiz flow
+
+### 📁 Files Modified
+- `main_bot.py`: Major refactoring of quiz system and URL handling
+- `quiz_system.py`: Updated questions and analysis logic
+- `config.py`: Refactored to use environment variables
+- `.env`: Added comprehensive configuration options
+
+### 🔧 Configuration
+New environment variables added:
+```
+MAX_EMOJIS_PER_MESSAGE=4
+MAX_LINES_PER_BLOCK=6
+OPENROUTER_MODEL=anthropic/claude-3-haiku
+OPENROUTER_MAX_TOKENS=1000
+OPENROUTER_TEMPERATURE=0.7
+```
+
 # Журнал изменений проекта
 
 ## Версия 2.2 - Docker развертывание (январь 2025)

@@ -4,6 +4,7 @@
 import logging
 import json
 import asyncio
+import hashlib
 from typing import Dict, List, Optional, Any
 from dataclasses import dataclass
 from enum import Enum
@@ -16,7 +17,7 @@ from telegram.ext import (
 )
 
 # Импорты наших модулей
-from config import BOT_TOKEN, OPENROUTER_API_KEY, OPENROUTER_CONFIG, DATA_FILES, LLM_LIMITS, ADMIN_USER_ID
+from config import BOT_TOKEN, OPENROUTER_API_KEY, OPENROUTER_CONFIG, DATA_FILES, LLM_LIMITS, ADMIN_USER_ID, TEXT_FORMATTING
 from quiz_system import PerfumeQuizSystem, create_quiz_system
 from ai_prompts import AIPrompts, PromptLimits
 
@@ -47,12 +48,16 @@ class UserSession:
     quiz_step: int = 0
     last_message_id: Optional[int] = None
     context_data: Dict[str, Any] = None
+    # Добавляем маппинг для callback данных
+    callback_mapping: Dict[str, str] = None
     
     def __post_init__(self):
         if self.quiz_answers is None:
             self.quiz_answers = {}
         if self.context_data is None:
             self.context_data = {}
+        if self.callback_mapping is None:
+            self.callback_mapping = {}
 
 class PerfumeConsultantBot:
     """Главный класс парфюмерного консультанта"""
@@ -104,6 +109,65 @@ class PerfumeConsultantBot:
             data['full_catalog'] = {'perfumes': []}
         
         return data
+    
+    def _format_text_for_telegram(self, text: str) -> str:
+        """Форматирует текст для лучшей читаемости в Telegram"""
+        import re
+        
+        # Убираем лишние звездочки и заменяем на HTML теги
+        text = re.sub(r'\*\*(.*?)\*\*', r'<b>\1</b>', text)
+        
+        # Ограничиваем количество эмодзи
+        emoji_count = len(re.findall(r'[\U0001F600-\U0001F64F\U0001F300-\U0001F5FF\U0001F680-\U0001F6FF\U0001F1E0-\U0001F1FF\U00002600-\U000027BF\U0001f900-\U0001f9ff\U0001f018-\U0001f270]', text))
+        if emoji_count > TEXT_FORMATTING['max_emojis_per_message']:
+            # Удаляем лишние эмодзи, оставляя только первые
+            emojis_found = 0
+            def replace_emoji(match):
+                nonlocal emojis_found
+                emojis_found += 1
+                if emojis_found <= TEXT_FORMATTING['max_emojis_per_message']:
+                    return match.group(0)
+                return ''
+            
+            text = re.sub(r'[\U0001F600-\U0001F64F\U0001F300-\U0001F5FF\U0001F680-\U0001F6FF\U0001F1E0-\U0001F1FF\U00002600-\U000027BF\U0001f900-\U0001f9ff\U0001f018-\U0001f270]', replace_emoji, text)
+        
+        # Разбиваем длинные блоки текста
+        lines = text.split('\n')
+        formatted_lines = []
+        current_block = []
+        
+        for line in lines:
+            if line.strip() == '':
+                if current_block:
+                    formatted_lines.extend(current_block)
+                    formatted_lines.append('')
+                    current_block = []
+            else:
+                current_block.append(line)
+                
+                # Если блок становится слишком длинным, добавляем разделитель
+                if len(current_block) >= TEXT_FORMATTING['max_lines_per_block']:
+                    formatted_lines.extend(current_block)
+                    formatted_lines.append('—' * 20)  # Разделитель
+                    current_block = []
+        
+        # Добавляем оставшиеся строки
+        if current_block:
+            formatted_lines.extend(current_block)
+        
+        # Убираем лишние пустые строки
+        result = []
+        prev_empty = False
+        for line in formatted_lines:
+            if line.strip() == '':
+                if not prev_empty:
+                    result.append(line)
+                prev_empty = True
+            else:
+                result.append(line)
+                prev_empty = False
+        
+        return '\n'.join(result)
 
     def _create_perfume_url_mapping(self) -> Dict[str, str]:
         """Создает словарь сопоставления названий ароматов с URL"""
@@ -138,21 +202,29 @@ class PerfumeConsultantBot:
         return url_mapping
 
     def _find_perfume_url(self, perfume_name: str) -> Optional[str]:
-        """Находит URL для аромата по названию"""
-        if not hasattr(self, '_url_mapping'):
-            self._url_mapping = self._create_perfume_url_mapping()
+        """Находит URL для конкретного аромата"""
+        if 'full_catalog' not in self.normalized_data:
+            return None
+            
+        perfumes = self.normalized_data['full_catalog'].get('perfumes', [])
+        normalized_search = perfume_name.lower().strip()
         
-        # Очищаем название для поиска
-        clean_name = perfume_name.lower().strip()
+        # Сначала ищем точное совпадение по имени
+        for perfume in perfumes:
+            if perfume.get('name', '').lower() == normalized_search:
+                return perfume.get('url')
         
-        # Прямой поиск
-        if clean_name in self._url_mapping:
-            return self._url_mapping[clean_name]
+        # Затем ищем по полному названию
+        for perfume in perfumes:
+            full_title = perfume.get('full_title', '').lower()
+            if normalized_search in full_title:
+                return perfume.get('url')
         
-        # Поиск по частичному совпадению
-        for key, url in self._url_mapping.items():
-            if clean_name in key or key in clean_name:
-                return url
+        # Ищем по бренду + имени
+        for perfume in perfumes:
+            brand_name = f"{perfume.get('brand', '')} {perfume.get('name', '')}".lower().strip()
+            if normalized_search in brand_name or brand_name in normalized_search:
+                return perfume.get('url')
         
         return None
 
@@ -200,7 +272,9 @@ class PerfumeConsultantBot:
                 # Если нет URL, убираем строку со ссылкой
                 lines[i] = ''
         
-        return '\n'.join(lines)
+        # Применяем форматирование для лучшей читаемости
+        formatted_response = self._format_text_for_telegram('\n'.join(lines))
+        return formatted_response
 
     def _extract_perfume_names_from_response(self, response: str) -> List[str]:
         """Извлекает названия ароматов из ответа ИИ"""
@@ -535,11 +609,11 @@ class PerfumeConsultantBot:
         
         # Создаем клавиатуру для вопроса
         keyboard = []
-        for option in current_question.options:
-            callback_data = f"quiz_{current_question.key}_{option}"
-            # Ограничиваем длину callback_data
-            if len(callback_data) > 64:
-                callback_data = callback_data[:64]
+        for i, option in enumerate(current_question.options):
+            # Создаем короткий callback_data на основе индекса
+            callback_data = f"quiz_{current_question.key}_{i}"
+            # Сохраняем соответствие между индексом и полным текстом
+            user_session.callback_mapping[callback_data] = option
             keyboard.append([InlineKeyboardButton(option, callback_data=callback_data)])
         
         keyboard.append([InlineKeyboardButton("🔙 Главное меню", callback_data="main_menu")])
@@ -594,6 +668,12 @@ class PerfumeConsultantBot:
             
             # Обрабатываем ответ и добавляем ссылки
             processed_response = self._process_ai_response_with_urls(ai_response)
+            
+            # Сбрасываем состояние квиза после завершения
+            user_session.current_state = BotState.MAIN_MENU
+            user_session.quiz_step = 0
+            user_session.quiz_answers = {}
+            user_session.callback_mapping = {}
             
             keyboard = [
                 [InlineKeyboardButton("🎯 Пройти квиз снова", callback_data="perfume_quiz")],
@@ -784,10 +864,18 @@ class PerfumeConsultantBot:
             parts = data.split("_", 2)
             if len(parts) >= 3:
                 key = parts[1]
-                value = parts[2]
-                user_session.quiz_answers[key] = value
-                user_session.quiz_step += 1
-                await self._send_quiz_question(query, user_session)
+                # Получаем полный текст ответа из маппинга
+                full_answer = user_session.callback_mapping.get(data)
+                if full_answer:
+                    user_session.quiz_answers[key] = full_answer
+                    user_session.quiz_step += 1
+                    logger.info(f"Quiz step {user_session.quiz_step}/{self.quiz_system.get_total_questions()}: {key} = {full_answer}")
+                    await self._send_quiz_question(query, user_session)
+                else:
+                    logger.warning(f"Не найден маппинг для callback_data: {data}")
+                    # Пропускаем вопрос если нет маппинга
+                    user_session.quiz_step += 1
+                    await self._send_quiz_question(query, user_session)
             return BotState.QUIZ_IN_PROGRESS.value
         
         elif data == "help":

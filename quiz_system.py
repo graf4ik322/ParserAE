@@ -170,17 +170,17 @@ class PerfumeQuizSystem:
             ),
             
             QuizQuestion(
-                id="budget",
-                category=QuizCategory.EXPERIENCE,
-                text="💰 Бюджет на аромат?",
+                id="longevity",
+                category=QuizCategory.PREFERENCES,
+                text="⏱️ Важна ли стойкость аромата?",
                 options=[
-                    "Экономный (до 30₽)",
-                    "Средний (30-45₽)",
-                    "Выше среднего (45₽+)",
-                    "Не важно, главное качество"
+                    "Очень важна (8+ часов)",
+                    "Важна (4-6 часов)",
+                    "Умеренно важна (2-4 часа)",
+                    "Не важна, главное аромат"
                 ],
-                key="budget",
-                weight=1.3
+                key="longevity",
+                weight=1.8
             ),
             
             # Дополнительные предпочтения
@@ -221,7 +221,7 @@ class PerfumeQuizSystem:
             "basic_complete": ["fragrance_family", "intensity"],
             "preferences_complete": ["lifestyle", "season"],
             "lifestyle_complete": ["time_of_day", "occasion"],
-            "occasions_complete": ["experience", "budget"],
+            "occasions_complete": ["experience", "longevity"],
             "experience_complete": ["quality_preference", "factory_preference"],
             "end": []
         }
@@ -277,7 +277,7 @@ class PerfumeQuizSystem:
     def _analyze_quality_requirements(self, answers: Dict[str, str]) -> Dict[str, str]:
         """Анализирует требования к качеству"""
         return {
-            "budget": answers.get("budget", "Не указано"),
+            "longevity": answers.get("longevity", "Не указано"),
             "experience": answers.get("experience_level", "Не указано"),
             "factory": answers.get("factory_preference", "Не указано")
         }
