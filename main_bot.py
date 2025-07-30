@@ -841,11 +841,8 @@ class PerfumeConsultantBot:
         processing_msg = await update.message.reply_text("🔍 Ищу подробную информацию об аромате...")
         
         try:
-            # Получаем данные для промпта с артикулами
-            available_perfumes = self._create_enhanced_perfume_list()
-            
             # Создаем промпт для получения информации об аромате
-            prompt = AIPrompts.create_fragrance_info_prompt(fragrance_query, available_perfumes)
+            prompt = AIPrompts.create_fragrance_info_prompt(fragrance_query)
             
             # Получаем ответ от ИИ
             ai_response = await self._call_openrouter_api(
@@ -853,9 +850,6 @@ class PerfumeConsultantBot:
                 max_tokens=PromptLimits.MAX_TOKENS_INFO,
                 temperature=PromptLimits.TEMP_FACTUAL
             )
-            
-            # Обрабатываем ответ и добавляем ссылки
-            processed_response = self._process_ai_response_with_urls(ai_response)
             
             await processing_msg.delete()
             
@@ -866,7 +860,9 @@ class PerfumeConsultantBot:
             ]
             reply_markup = InlineKeyboardMarkup(keyboard)
             
-            response_text = f"📖 <b>Экспертная информация:</b>\n\n{processed_response}"
+            # Применяем только форматирование без поиска ссылок
+            formatted_response = self._format_text_for_telegram(ai_response)
+            response_text = f"📖 <b>Экспертная информация:</b>\n\n{formatted_response}"
             
             # Разбиваем длинный ответ если нужно
             if len(response_text) > 4000:
