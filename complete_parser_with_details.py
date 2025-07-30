@@ -50,14 +50,35 @@ class CompleteParfumeParser:
         
         # Известные бренды для лучшего парсинга
         self.known_brands = [
-            'Tom Ford', 'Chanel', 'Dior', 'Christian Dior', 'Creed', 'Amouage',
-            'Maison Francis Kurkdjian', 'Byredo', 'Le Labo', 'Escentric Molecules',
-            'Tiziana Terenzi', 'Ex Nihilo', 'Nasomatto', 'Orto Parisi',
-            'Giorgio Armani', 'Versace', 'Gucci', 'Prada', 'Yves Saint Laurent',
-            'Givenchy', 'Hermès', 'Bulgari', 'Dolce&Gabbana', 'Paco Rabanne',
-            'Lacoste', 'Hugo Boss', 'Calvin Klein', 'Antonio Banderas',
-            'Lanvin', 'Attar Collection', 'Marc-Antoine Barrois', 'Ajmal',
-            'Victoria\'s Secret', 'Thomas Kosmala'
+            'Abdul Samad Al Qurashi', 'Acqua di Parma', 'Afnan', 'Ajmal', 'Al Haramain', 'Al Rehab',
+            'Al-Jazeera', 'Alexandre.j', 'Amouage', 'Anna Sui', 'Antonio Banderas', 'Arabian Oud',
+            'Ard al Zaafaran', 'Ariana Grande', 'Armand Basi', 'Atelier Cologne', 'Atkinsons',
+            'Attar Collection', 'Avon', 'Azzaro', 'BDK', 'Bharara', 'Boadicea The Victorius',
+            'Bond №9', 'Bottega Veneta', 'Brioni', 'Britney Spears', 'Burberry', 'Bvlgari',
+            'Byredo', 'Cacharel', 'Calvin Klein', 'Canali', 'Carolina Herrera', 'Caron',
+            'Cartier', 'Chanel', 'Chloe', 'Christian Dior', 'Clinique', 'Clive Christian',
+            'Creed', 'Cristiano Ronaldo', 'David Beckham', 'Davidoff', 'Dolce&Gabbana',
+            'Donna Karan', 'Dunhill', 'Elizabeth Arden', 'Escada', 'Escentric Molecules',
+            'Essential Parfums', 'Ex Nihilo', 'Fendi', 'Floraiku', 'Franck Boclet',
+            'Franck Olivier', 'Frederic Malle', 'Genyum', 'Giardini Di Toscana',
+            'Giorgio Armani', 'Gissah', 'Givaudan', 'Givenchy', 'Gucci', 'Guerlain',
+            'Hamidi', 'Haute Fragrance', 'Hermes', 'Hugo Boss', 'Ibraheem AlQurashi',
+            'Initio Parfums', 'IXORA', 'Jacques Bogart', 'Jean Paul Gaultier',
+            'Jimmy Choo', 'Jo Malone', 'Johan B.', 'Juliette Has A Gun', 'Junaid Perfumes',
+            'Kajal', 'Kayali Fragrances', 'Kenzo', 'Khalis', 'Khaltat', 'Kilian',
+            'Lacoste', 'Lalique', 'Lancome', 'Lanvin', 'Le Labo', 'Louis Vuitton',
+            'Maison Crivelli', 'Maison Francis Kurkdjian', 'Mancera', 'Marc-Antoine Barrois',
+            'Matiere Premiere', 'Memo', 'Molton Brown', 'Montale', 'Montblanc',
+            'Moschino', 'Narciso Rodriguez', 'Nasomatto', 'Nicolai Parfumeur Createur',
+            'Nina Ricci', 'Nishane', 'Ormonde Jayne', 'Orto Parisi', 'Paco Rabanne',
+            'Parfums De Marly', 'Paris World Luxury', 'Penhaligon\'s', 'Perfumer\'s Workshop',
+            'Prada', 'Rasasi', 'Reef Perfumes', 'Reiha', 'Renegades', 'Richard',
+            'Roja Dove', 'Rosendo Mateu', 'Rubeus Milano', 'Saab', 'Salvatore Ferragamo',
+            'Serge Lutens', 'Shaik', 'Surrati Perfumes', 'Swiss Arabian', 'Tauer Perfumes',
+            'Thameen', 'The House of Oud', 'Thomas Kosmala', 'Tiziana terenzi', 'Tom Ford',
+            'Trussardi', 'Van Cleef & Arpels', 'Versace', 'Vertus', 'Victoria Secret',
+            'Victoria\'s Secret', 'Viktor&Rolf', 'Vilhelm Parfumerie', 'Widian', 'Xerjoff',
+            'Yves Saint Laurent', 'Zadig & Voltaire', 'Zahra Perfumes', 'Zarkoperfume'
         ]
 
     def get_page_content(self, url: str) -> Optional[BeautifulSoup]:
