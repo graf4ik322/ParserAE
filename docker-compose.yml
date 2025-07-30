@@ -37,6 +37,48 @@ services:
       retries: 3
       start_period: 30s
 
+  # Автоматический парсер и нормализатор данных
+  auto-parser:
+    build: .
+    container_name: perfume-auto-parser
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - PYTHONUNBUFFERED=1
+      - TZ=Europe/Moscow
+    volumes:
+      # Монтируем данные для записи (НЕ read-only!)
+      - ./full_perfumes_catalog_complete.json:/app/full_perfumes_catalog_complete.json
+      - ./full_basic_catalog.json:/app/full_basic_catalog.json
+      - ./names_only.json:/app/names_only.json
+      - ./brand_name.json:/app/brand_name.json
+      - ./name_factory.json:/app/name_factory.json
+      - ./brand_name_factory.json:/app/brand_name_factory.json
+      - ./full_data_compact.json:/app/full_data_compact.json
+      - ./factory_analysis.json:/app/factory_analysis.json
+      - ./quiz_reference.json:/app/quiz_reference.json
+      - ./last_check.json:/app/last_check.json
+      - ./auto_parser.log:/app/auto_parser.log
+      # Монтируем Docker socket для перезапуска бота
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: ["python3", "auto_parser_service.py"]
+    networks:
+      - perfume-network
+    depends_on:
+      - perfume-bot
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import os; exit(0 if os.path.exists('auto_parser.log') else 1)"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
   # Опциональный сервис для мониторинга логов
   log-viewer:
     image: amir20/dozzle:latest
