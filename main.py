@@ -36,7 +36,8 @@ class PerfumeBot:
         self.auto_parser = AutoParser(self.db)
         
         # Инициализация приложения
-        self.application = Application.builder().token(self.config.bot_token).build()
+        import pytz
+        self.application = Application.builder().token(self.config.bot_token).timezone(pytz.UTC).build()
         
         # Регистрация обработчиков
         self._register_handlers()
@@ -416,14 +417,19 @@ class PerfumeBot:
                 reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Главное меню", callback_data="back_to_menu")]])
             )
 
-    def run(self):
+    async def run(self):
         """Запускает бота"""
         try:
+            # Запускаем автопарсер в фоне
+            asyncio.create_task(self.auto_parser.start_scheduler())
+            
             logger.info("🚀 Perfume Bot запущен и готов к работе!")
+            logger.info(f"🤖 Bot username: @{self.application.bot.username}")
+            logger.info(f"🔗 Bot link: https://t.me/{self.application.bot.username}")
             
             # Запускаем polling с логированием
             logger.info("📡 Запускаем polling для получения обновлений...")
-            self.application.run_polling(drop_pending_updates=True)
+            await self.application.run_polling(drop_pending_updates=True)
             
         except Exception as e:
             logger.error(f"❌ Ошибка при запуске бота: {e}")
@@ -433,7 +439,7 @@ def main():
     """Главная функция"""
     try:
         bot = PerfumeBot()
-        bot.run()
+        asyncio.run(bot.run())
     except KeyboardInterrupt:
         logger.info("🛑 Бот остановлен пользователем")
     except Exception as e:
