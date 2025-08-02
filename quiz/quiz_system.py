@@ -704,14 +704,26 @@ class QuizSystem:
         # Получаем все подходящие парфюмы из БД
         suitable_perfumes = self.db.get_all_perfumes_from_database()
         
-        # Формируем запрос к AI с анализом Edwards Wheel
-        ai_prompt = self._create_ai_prompt_with_edwards(analysis_result, suitable_perfumes)
+        # Формируем запрос к AI с анализом Edwards Wheel используя улучшенные промпты
+        from ai.prompts import PromptTemplates
+        ai_prompt = PromptTemplates.create_quiz_results_prompt(
+            analysis_result['profile'], 
+            suitable_perfumes, 
+            analysis_result['edwards_analysis']
+        )
         
         # Отправляем запрос к AI
         try:
             ai_response = await self.ai_processor.process_message(ai_prompt, user_id)
             
             # Формируем итоговое сообщение
+            family_names = {
+                'floral': 'Цветочные',
+                'oriental': 'Восточные/Амбровые', 
+                'woody': 'Древесные',
+                'fresh': 'Свежие'
+            }
+            
             result_text = f"""
 🎯 **Квиз завершен!**
 
@@ -721,14 +733,20 @@ class QuizSystem:
 🌳 Древесные: {analysis_result['edwards_analysis']['woody']}%
 💧 Свежие: {analysis_result['edwards_analysis']['fresh']}%
 
-**Доминирующее семейство:** {analysis_result['dominant_family']}
+**Доминирующее семейство:** {family_names.get(analysis_result['dominant_family'], analysis_result['dominant_family'])}
 
-🤖 **Персональные рекомендации:**
+🤖 **Персональные рекомендации от ИИ-консультанта:**
 {ai_response}
             """
             
         except Exception as e:
             logger.error(f"Ошибка при обработке AI запроса: {e}")
+            family_names = {
+                'floral': 'Цветочные',
+                'oriental': 'Восточные/Амбровые', 
+                'woody': 'Древесные',
+                'fresh': 'Свежие'
+            }
             result_text = f"""
 🎯 **Квиз завершен!**
 
@@ -738,9 +756,13 @@ class QuizSystem:
 🌳 Древесные: {analysis_result['edwards_analysis']['woody']}%
 💧 Свежие: {analysis_result['edwards_analysis']['fresh']}%
 
-**Доминирующее семейство:** {analysis_result['dominant_family']}
+**Доминирующее семейство:** {family_names.get(analysis_result['dominant_family'], analysis_result['dominant_family'])}
 
-⚠️ AI-анализ временно недоступен, но ваш профиль сохранен!
+⚠️ **ИИ-анализ временно недоступен**
+Ваш профиль сохранен! Попробуйте пройти квиз позже для получения персональных рекомендаций от ИИ-консультанта.
+
+💡 **Ручные рекомендации на основе анализа:**
+Исходя из вашего доминирующего ароматического семейства "{family_names.get(analysis_result['dominant_family'], analysis_result['dominant_family'])}", рекомендуем обратить внимание на соответствующие категории ароматов в каталоге.
             """
         
         keyboard = [
@@ -835,41 +857,3 @@ class QuizSystem:
             'unique_keywords': len(set(all_keywords))
         }
 
-    def _create_ai_prompt_with_edwards(self, analysis_result: Dict, perfumes_data: List) -> str:
-        """Создает промпт для AI с анализом Edwards Wheel"""
-        
-        family_names = {
-            'floral': 'Цветочные',
-            'oriental': 'Восточные/Амбровые',
-            'woody': 'Древесные',
-            'fresh': 'Свежие'
-        }
-        
-        prompt = f"""
-Ты эксперт-парфюмер. Проанализируй результаты научного квиза на основе Edwards Fragrance Wheel и подбери идеальные парфюмы.
-
-АНАЛИЗ ПОЛЬЗОВАТЕЛЯ:
-🔬 Edwards Fragrance Wheel анализ:
-- Цветочные: {analysis_result['edwards_analysis']['floral']}%
-- Восточные/Амбровые: {analysis_result['edwards_analysis']['oriental']}%  
-- Древесные: {analysis_result['edwards_analysis']['woody']}%
-- Свежие: {analysis_result['edwards_analysis']['fresh']}%
-
-Доминирующее семейство: {family_names.get(analysis_result['dominant_family'], analysis_result['dominant_family'])}
-
-Ключевые характеристики: {', '.join(analysis_result['all_keywords'][:15])}
-
-ЗАДАЧА:
-1. Подбери 3-5 конкретных парфюмов из предоставленного каталога
-2. Учитывай доминирующее семейство Edwards Wheel
-3. Объясни почему именно эти ароматы подходят
-4. Укажи для каких случаев каждый аромат подходит
-5. Дай краткое описание каждого аромата
-
-КАТАЛОГ ПАРФЮМОВ:
-{json.dumps(perfumes_data[:100], ensure_ascii=False, indent=2)}
-
-Отвечай структурированно и профессионально, как консультант в парфюмерном магазине.
-        """
-        
-        return prompt

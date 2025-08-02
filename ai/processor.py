@@ -260,6 +260,45 @@ class AIProcessor:
         
         return status
 
+    async def process_message(self, message: str, user_id: int = None) -> str:
+        """Обрабатывает сообщение и возвращает ответ от ИИ"""
+        try:
+            # Проверяем кулдаун пользователя
+            if user_id and self.is_api_cooldown_active(user_id):
+                return "⏱️ Пожалуйста, подождите перед следующим запросом к ИИ."
+            
+            # Отправляем запрос к ИИ
+            response = await self.call_openrouter_api(message)
+            
+            # Устанавливаем кулдаун после успешного запроса
+            if user_id:
+                self.set_api_cooldown(user_id, 10)  # 10 секунд кулдаун
+            
+            # Форматируем ответ для Telegram
+            formatted_response = self._format_text_for_telegram(response)
+            
+            return formatted_response
+            
+        except Exception as e:
+            logger.error(f"Ошибка при обработке сообщения: {e}")
+            return "Извините, произошла ошибка при обработке вашего запроса."
+
+    def search_perfumes(self, query: str, perfumes_data: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Ищет парфюмы по запросу пользователя"""
+        matching = []
+        query_lower = query.lower()
+        
+        for perfume in perfumes_data:
+            # Проверяем совпадения в названии, бренде, фабрике или артикуле
+            if (query_lower in perfume['name'].lower() or
+                query_lower in perfume['brand'].lower() or
+                query_lower in perfume['factory'].lower() or
+                query_lower in perfume['article'].lower()):
+                matching.append(perfume)
+        
+        logger.info(f"🔍 По запросу '{query}' найдено {len(matching)} ароматов")
+        return matching
+
     def __del__(self):
         """Деструктор"""
         if hasattr(self, 'session') and self.session and not self.session.closed:
