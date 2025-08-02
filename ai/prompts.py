@@ -4,17 +4,17 @@
 from typing import Dict, List, Any
 
 class PromptTemplates:
-    """Шаблоны промптов для ИИ с улучшенным форматированием"""
+    """Шаблоны промптов для ИИ с улучшенным форматированием - БЕЗ ОГРАНИЧЕНИЙ"""
     
     @staticmethod
     def create_perfume_question_prompt(user_question: str, perfumes_data: List[Dict[str, Any]]) -> str:
-        """Создает промпт для вопроса о парфюмах со ВСЕМИ данными каталога"""
+        """Создает промпт для вопроса о парфюмах со ВСЕМИ данными каталога БЕЗ ОГРАНИЧЕНИЙ"""
         
-        # Формируем оптимизированный список парфюмов (только ключевые поля)
+        # Формируем ПОЛНЫЙ список парфюмов (все парфюмы)
         perfumes_list = []
         factory_analysis = {}
         
-        for perfume in perfumes_data:
+        for perfume in perfumes_data:  # БЕЗ ОГРАНИЧЕНИЙ
             perfume_line = (
                 f"{perfume['name']} | "
                 f"{perfume['factory']} | "
@@ -22,7 +22,7 @@ class PromptTemplates:
             )
             perfumes_list.append(perfume_line)
             
-            # Анализ фабрик для контекста
+            # Анализ фабрик для контекста - ВСЕ фабрики
             factory = perfume['factory']
             if factory not in factory_analysis:
                 factory_analysis[factory] = {'perfume_count': 0, 'quality_levels': set()}
@@ -30,13 +30,13 @@ class PromptTemplates:
             if 'quality' in perfume:
                 factory_analysis[factory]['quality_levels'].add(perfume['quality'])
         
-        # Ограничиваем списки для экономии токенов
-        limited_perfumes = perfumes_list[:200]
+        # ВЕСЬ список парфюмов - без ограничений
+        all_perfumes = perfumes_list
         
-        # Создаем краткую сводку по фабрикам
+        # Создаем ПОЛНУЮ сводку по ВСЕМ фабрикам
         factory_summary = []
-        for factory, data in list(factory_analysis.items())[:10]:
-            quality_info = ', '.join(list(data['quality_levels'])[:2]) if data['quality_levels'] else 'стандарт'
+        for factory, data in factory_analysis.items():  # ВСЕ фабрики
+            quality_info = ', '.join(list(data['quality_levels'])) if data['quality_levels'] else 'стандарт'
             factory_summary.append(
                 f"- {factory}: {data['perfume_count']} ароматов, качество: {quality_info}"
             )
@@ -45,14 +45,14 @@ class PromptTemplates:
 
 ВОПРОС КЛИЕНТА: "{user_question}"
 
-ДОСТУПНЫЕ АРОМАТЫ (название + фабрика + артикул):
-{chr(10).join(limited_perfumes)}
+ВСЕ ДОСТУПНЫЕ АРОМАТЫ (название + фабрика + артикул):
+{chr(10).join(all_perfumes)}
 
-АНАЛИЗ ФАБРИК:
+ПОЛНЫЙ АНАЛИЗ ВСЕХ ФАБРИК:
 {chr(10).join(factory_summary)}
 
 ИНСТРУКЦИИ:
-1. Проанализируй запрос клиента и выбери 3-5 наиболее подходящих ароматов
+1. Проанализируй запрос клиента и выбери 3-5 наиболее подходящих ароматов из ВСЕГО каталога
 2. Для каждого аромата укажи:
    - Почему он подходит для данного запроса
    - Наилучшую Фабрику-производителя и её особенности
@@ -88,16 +88,16 @@ class PromptTemplates:
     def create_quiz_results_prompt(user_profile: Dict[str, Any], 
                                  suitable_perfumes: List[Dict[str, Any]],
                                  edwards_analysis: Dict[str, Any] = None) -> str:
-        """Создает улучшенный промпт для результатов квиза с персонализацией"""
+        """Создает улучшенный промпт для результатов квиза с персонализацией - ВЕСЬ КАТАЛОГ"""
         
         # Анализируем профиль пользователя
         profile_summary = PromptTemplates._analyze_user_profile_detailed(user_profile)
         
-        # Формируем оптимизированный список подходящих парфюмов
+        # Формируем ПОЛНЫЙ список ВСЕХ подходящих парфюмов - БЕЗ ОГРАНИЧЕНИЙ
         perfumes_list = []
         factory_analysis = {}
         
-        for perfume in suitable_perfumes[:300]:  # Ограничиваем для экономии токенов
+        for perfume in suitable_perfumes:  # ВСЕ парфюмы без ограничений
             perfume_line = (
                 f"{perfume['name']} | "
                 f"{perfume['factory']} | "
@@ -105,7 +105,7 @@ class PromptTemplates:
             )
             perfumes_list.append(perfume_line)
             
-            # Анализ фабрик
+            # Анализ ВСЕХ фабрик
             factory = perfume['factory']
             if factory not in factory_analysis:
                 factory_analysis[factory] = {'perfume_count': 0, 'quality_levels': set()}
@@ -113,11 +113,11 @@ class PromptTemplates:
             if 'quality' in perfume:
                 factory_analysis[factory]['quality_levels'].add(perfume['quality'])
         
-        # Создаем краткую сводку по фабрикам
-        top_factories = []
-        for factory, data in list(factory_analysis.items())[:8]:
-            quality_info = ', '.join(list(data['quality_levels'])[:2]) if data['quality_levels'] else 'стандарт'
-            top_factories.append(
+        # Создаем сводку по ВСЕМ фабрикам - без ограничений
+        all_factories = []
+        for factory, data in factory_analysis.items():  # ВСЕ фабрики
+            quality_info = ', '.join(list(data['quality_levels'])) if data['quality_levels'] else 'стандарт'
+            all_factories.append(
                 f"- {factory}: {data['perfume_count']} ароматов, качество: {quality_info}"
             )
         
@@ -127,14 +127,14 @@ class PromptTemplates:
 
 {profile_summary}
 
-ДОСТУПНЫЕ АРОМАТЫ (бренд - название + фабрика + артикул):
+ВСЕ ДОСТУПНЫЕ АРОМАТЫ (бренд - название + фабрика + артикул):
 {perfumes_text}
 
-АНАЛИЗ ФАБРИК:
-{chr(10).join(top_factories)}
+ПОЛНЫЙ АНАЛИЗ ВСЕХ ФАБРИК:
+{chr(10).join(all_factories)}
 
 ЗАДАЧА:
-Создай персональную подборку из 5-7 ароматов, идеально подходящих этому клиенту.
+Создай персональную подборку из 5-7 ароматов, идеально подходящих этому клиенту из ВСЕГО доступного каталога.
 
 КРИТЕРИИ ОТБОРА:
 ✅ Полное соответствие гендеру и возрасту
