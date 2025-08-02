@@ -94,6 +94,13 @@ class PerfumeBot:
         self.application.add_handler(CommandHandler("stats", self.stats_command))
         self.application.add_handler(CommandHandler("parse", self.parse_command))
         
+        # Новые админ команды
+        self.application.add_handler(CommandHandler("admin", self.admin_panel_command))
+        self.application.add_handler(CommandHandler("admindb", self.admin_database_command))
+        self.application.add_handler(CommandHandler("adminapi", self.admin_api_command))
+        self.application.add_handler(CommandHandler("adminparser", self.admin_parser_command))
+        self.application.add_handler(CommandHandler("adminforce", self.admin_force_parse_command))
+        
         # Callback-кнопки
         self.application.add_handler(CallbackQueryHandler(self.button_callback))
         
@@ -177,6 +184,8 @@ class PerfumeBot:
 
     async def help_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Обработчик команды /help"""
+        user_id = update.effective_user.id
+        
         help_text = """
 🌸 **Парфюмерный Консультант-Бот**
 
@@ -189,6 +198,7 @@ class PerfumeBot:
 **Команды:**
 /start - Главное меню
 /help - Эта справка
+/stats - Краткая статистика
 
 **Как использовать:**
 1. Выберите нужную опцию в главном меню
@@ -197,6 +207,26 @@ class PerfumeBot:
 
 Бот работает с полным каталогом из 1200+ ароматов! 🎉
         """
+        
+        # Добавляем админ-команды для администратора
+        if user_id == self.config.admin_user_id:
+            help_text += """
+
+🔧 **Команды администратора:**
+/admin - Главная админ-панель
+/admindb - Состояние базы данных
+/adminapi - Проверка API ключа
+/adminparser - Статус парсера
+/adminforce - Принудительный парсинг
+/parse - Быстрый парсинг (совместимость)
+
+**Админ-панель включает:**
+📊 Подробную информацию о БД
+🔑 Тестирование OpenRouter API
+🔄 Мониторинг парсера
+⚡ Ручной запуск парсинга
+📈 Полную статистику системы
+            """
         
         await update.message.reply_text(help_text, parse_mode='Markdown')
 
@@ -249,6 +279,275 @@ class PerfumeBot:
         except Exception as e:
             logger.error(f"Ошибка при парсинге: {e}")
             await update.message.reply_text(f"❌ Ошибка при обновлении каталога: {e}")
+
+    async def admin_panel_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Главная админ-панель"""
+        user_id = update.effective_user.id
+        
+        if user_id != self.config.admin_user_id:
+            await update.message.reply_text("❌ У вас нет прав доступа к админ-панели")
+            return
+        
+        keyboard = [
+            [InlineKeyboardButton("📊 Состояние БД", callback_data="admin_db")],
+            [InlineKeyboardButton("🔑 Проверить API", callback_data="admin_api")],
+            [InlineKeyboardButton("🔄 Статус парсера", callback_data="admin_parser")],
+            [InlineKeyboardButton("⚡ Запустить парсинг", callback_data="admin_force_parse")],
+            [InlineKeyboardButton("📈 Полная статистика", callback_data="admin_full_stats")]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        admin_text = f"""
+🔧 **Административная панель**
+
+Добро пожаловать, администратор!
+
+**Доступные функции:**
+📊 **Состояние БД** - подробная информация о базе данных
+🔑 **Проверить API** - тестирование OpenRouter API
+🔄 **Статус парсера** - мониторинг системы парсинга
+⚡ **Запустить парсинг** - принудительное обновление каталога
+📈 **Полная статистика** - детальная аналитика
+
+🕐 Время: {datetime.now().strftime('%H:%M:%S %d.%m.%Y')}
+        """
+        
+        await update.message.reply_text(
+            admin_text,
+            parse_mode='Markdown',
+            reply_markup=reply_markup
+        )
+
+    async def admin_database_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Подробная информация о базе данных"""
+        user_id = update.effective_user.id
+        
+        if user_id != self.config.admin_user_id:
+            await update.message.reply_text("❌ У вас нет прав доступа к админ-панели")
+            return
+        
+        try:
+            db_info = self.db.get_detailed_database_info()
+            
+            # Формируем отчет
+            report = f"📊 **Подробная информация о базе данных**\n\n"
+            
+            report += f"📁 **Файл БД:** `{db_info['database_path']}`\n"
+            report += f"💾 **Размер:** {db_info['database_size']}\n\n"
+            
+            # Информация о таблицах
+            report += "📋 **Таблицы:**\n"
+            for table, info in db_info['tables'].items():
+                status = "✅" if info['exists'] else "❌"
+                report += f"{status} `{table}`: {info['count']} записей\n"
+            
+            # Топ пользователи
+            if db_info['top_users']:
+                report += f"\n👥 **Топ-{len(db_info['top_users'])} активных пользователей:**\n"
+                for user in db_info['top_users'][:5]:
+                    username = user['username'] or user['first_name'] or f"ID{user['telegram_id']}"
+                    report += f"• {username}: {user['activity_count']} действий\n"
+            
+            # Статистика парфюмов
+            if 'top_brands' in db_info['perfume_stats']:
+                report += f"\n🌸 **Топ-5 брендов:**\n"
+                for brand in db_info['perfume_stats']['top_brands'][:5]:
+                    report += f"• {brand['brand']}: {brand['count']} ароматов\n"
+            
+            # API использование
+            if db_info['api_usage']:
+                recent_api = db_info['api_usage'][0]
+                report += f"\n🔑 **API за последний день:**\n"
+                report += f"• Запросов: {recent_api['requests']}\n"
+                report += f"• Токенов: {recent_api['total_tokens']}\n"
+            
+            # Ошибки
+            if db_info['errors']:
+                report += f"\n⚠️ **Ошибки:**\n"
+                for error in db_info['errors'][:3]:
+                    report += f"• {error}\n"
+            
+            await update.message.reply_text(
+                report,
+                parse_mode='Markdown',
+                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔧 Админ-панель", callback_data="admin_panel")]])
+            )
+            
+        except Exception as e:
+            logger.error(f"Ошибка в admin_database_command: {e}")
+            await update.message.reply_text(f"❌ Ошибка при получении информации о БД: {e}")
+
+    async def admin_api_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Проверка состояния API"""
+        user_id = update.effective_user.id
+        
+        if user_id != self.config.admin_user_id:
+            await update.message.reply_text("❌ У вас нет прав доступа к админ-панели")
+            return
+        
+        checking_msg = await update.message.reply_text("🔍 Проверяю состояние API...")
+        
+        try:
+            api_status = await self.ai.check_api_status()
+            
+            # Формируем отчет
+            status_icon = "✅" if api_status['api_key_valid'] else "❌"
+            report = f"🔑 **Состояние OpenRouter API** {status_icon}\n\n"
+            
+            report += f"🔐 **API Key:** `{api_status['api_key_masked']}`\n"
+            report += f"🤖 **Модель:** `{api_status['model']}`\n"
+            report += f"🌐 **URL:** `{api_status['base_url']}`\n"
+            report += f"⏰ **Проверено:** {datetime.fromisoformat(api_status['last_check']).strftime('%H:%M:%S')}\n"
+            
+            if api_status['response_time']:
+                report += f"⚡ **Время ответа:** {api_status['response_time']}с\n"
+            
+            if api_status['api_key_valid']:
+                report += f"✅ **Статус:** API работает корректно\n"
+                if api_status.get('tokens_used'):
+                    report += f"🎯 **Токенов в тесте:** {api_status['tokens_used']}\n"
+                if api_status.get('actual_model'):
+                    report += f"🔧 **Фактическая модель:** `{api_status['actual_model']}`\n"
+            else:
+                report += f"❌ **Ошибка:** {api_status.get('error', 'Неизвестная ошибка')}\n"
+            
+            await checking_msg.delete()
+            await update.message.reply_text(
+                report,
+                parse_mode='Markdown',
+                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔧 Админ-панель", callback_data="admin_panel")]])
+            )
+            
+        except Exception as e:
+            logger.error(f"Ошибка в admin_api_command: {e}")
+            await checking_msg.delete()
+            await update.message.reply_text(f"❌ Ошибка при проверке API: {e}")
+
+    async def admin_parser_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Статус парсера"""
+        user_id = update.effective_user.id
+        
+        if user_id != self.config.admin_user_id:
+            await update.message.reply_text("❌ У вас нет прав доступа к админ-панели")
+            return
+        
+        try:
+            parser_status = self.auto_parser.get_parser_status()
+            
+            # Формируем отчет
+            status_icon = "🔄" if parser_status['is_running'] else "⏸️"
+            report = f"🔄 **Статус парсера** {status_icon}\n\n"
+            
+            # Текущее состояние
+            report += f"📊 **Текущее состояние:**\n"
+            report += f"• Запущен: {'✅ Да' if parser_status['running_since_start'] else '❌ Нет'}\n"
+            report += f"• Активен: {'✅ Да' if parser_status['is_running'] else '❌ Нет'}\n"
+            
+            if parser_status['current_operation']:
+                report += f"• Операция: {parser_status['current_operation']}\n"
+            
+            if parser_status['last_operation_time']:
+                last_op = datetime.fromisoformat(parser_status['last_operation_time'])
+                report += f"• Последняя операция: {last_op.strftime('%H:%M:%S %d.%m')}\n"
+            
+            # Статистика
+            stats = parser_status['statistics']
+            report += f"\n📈 **Статистика:**\n"
+            report += f"• Всего запусков: {stats['total_runs']}\n"
+            report += f"• Успешных: {stats['successful_runs']}\n"
+            report += f"• Ошибок: {stats['failed_runs']}\n"
+            report += f"• Последний результат: +{stats['last_items_added']}, ~{stats['last_items_updated']}\n"
+            
+            # Исходные файлы
+            report += f"\n📁 **Исходные файлы:**\n"
+            for filename, file_info in parser_status['source_files'].items():
+                status = "✅" if file_info['exists'] else "❌"
+                size = f" ({file_info['size']} байт)" if file_info['exists'] else ""
+                report += f"{status} `{filename}`{size}\n"
+            
+            # БД статистика
+            if 'database_statistics' in parser_status and not parser_status['database_statistics'].get('error'):
+                db_stats = parser_status['database_statistics']
+                if db_stats['last_parse_time']:
+                    last_parse = datetime.fromisoformat(db_stats['last_parse_time'])
+                    report += f"\n🕐 **Последний парсинг:** {last_parse.strftime('%H:%M:%S %d.%m.%Y')}\n"
+            
+            await update.message.reply_text(
+                report,
+                parse_mode='Markdown',
+                reply_markup=InlineKeyboardMarkup([
+                    [InlineKeyboardButton("⚡ Запустить парсинг", callback_data="admin_force_parse")],
+                    [InlineKeyboardButton("🔧 Админ-панель", callback_data="admin_panel")]
+                ])
+            )
+            
+        except Exception as e:
+            logger.error(f"Ошибка в admin_parser_command: {e}")
+            await update.message.reply_text(f"❌ Ошибка при получении статуса парсера: {e}")
+
+    async def admin_force_parse_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Принудительный запуск парсинга"""
+        user_id = update.effective_user.id
+        
+        if user_id != self.config.admin_user_id:
+            await update.message.reply_text("❌ У вас нет прав доступа к админ-панели")
+            return
+        
+        # Проверяем, не запущен ли уже парсер
+        parser_status = self.auto_parser.get_parser_status()
+        if parser_status['is_running']:
+            await update.message.reply_text(
+                "⚠️ Парсер уже выполняется. Дождитесь завершения текущей операции.",
+                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔄 Статус парсера", callback_data="admin_parser")]])
+            )
+            return
+        
+        processing_msg = await update.message.reply_text("🔄 Запускаю принудительный парсинг каталога...")
+        
+        try:
+            result = await self.auto_parser.force_parse_catalog(admin_user_id=user_id)
+            
+            # Формируем детальный отчет
+            status_icon = "✅" if result['success'] else "❌"
+            report = f"🔄 **Результат парсинга** {status_icon}\n\n"
+            
+            report += f"⏰ **Время выполнения:** {result['execution_time']}с\n"
+            report += f"👤 **Запущен админом:** ID{result['started_by']}\n"
+            report += f"🕐 **Время:** {datetime.fromisoformat(result['start_time']).strftime('%H:%M:%S %d.%m.%Y')}\n\n"
+            
+            if result['success']:
+                report += f"📊 **Результаты:**\n"
+                report += f"• Обработано из источника: {result.get('total_items_in_source', 'N/A')}\n"
+                report += f"• Было в БД: {result.get('items_before', 'N/A')}\n"
+                report += f"• Стало в БД: {result.get('items_after', 'N/A')}\n"
+                report += f"• Добавлено: {result['items_added']}\n"
+                report += f"• Обновлено: {result['items_updated']}\n"
+            else:
+                report += f"❌ **Ошибки:**\n"
+                for error in result['errors'][:3]:
+                    report += f"• {error}\n"
+            
+            # Статус исходных файлов
+            if 'source_files_status' in result:
+                report += f"\n📁 **Исходные файлы:**\n"
+                for filename, file_info in result['source_files_status'].items():
+                    status = "✅" if file_info['exists'] else "❌"
+                    report += f"{status} {filename}\n"
+            
+            await processing_msg.delete()
+            await update.message.reply_text(
+                report,
+                parse_mode='Markdown',
+                reply_markup=InlineKeyboardMarkup([
+                    [InlineKeyboardButton("🔄 Статус парсера", callback_data="admin_parser")],
+                    [InlineKeyboardButton("🔧 Админ-панель", callback_data="admin_panel")]
+                ])
+            )
+            
+        except Exception as e:
+            logger.error(f"Ошибка в admin_force_parse_command: {e}")
+            await processing_msg.delete()
+            await update.message.reply_text(f"❌ Ошибка при запуске парсинга: {e}")
 
     async def show_main_menu(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Показывает главное меню"""
@@ -304,6 +603,19 @@ class PerfumeBot:
             await self.show_main_menu(update, context)
         elif query.data.startswith("quiz_"):
             await self.quiz.handle_quiz_callback(update, context)
+        # Админ-панель callbacks
+        elif query.data == "admin_panel":
+            await self._handle_admin_panel_callback(update, context)
+        elif query.data == "admin_db":
+            await self._handle_admin_db_callback(update, context)
+        elif query.data == "admin_api":
+            await self._handle_admin_api_callback(update, context)
+        elif query.data == "admin_parser":
+            await self._handle_admin_parser_callback(update, context)
+        elif query.data == "admin_force_parse":
+            await self._handle_admin_force_parse_callback(update, context)
+        elif query.data == "admin_full_stats":
+            await self._handle_admin_full_stats_callback(update, context)
 
     async def start_perfume_question(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Начинает режим вопросов о парфюмах"""
@@ -502,6 +814,245 @@ class PerfumeBot:
                 "❌ Произошла ошибка при поиске информации. Попробуйте позже.",
                 reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Главное меню", callback_data="back_to_menu")]])
             )
+
+    async def _handle_admin_panel_callback(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Обрабатывает callback для главной админ-панели"""
+        user_id = update.effective_user.id
+        
+        if user_id != self.config.admin_user_id:
+            await update.callback_query.edit_message_text("❌ У вас нет прав доступа к админ-панели")
+            return
+        
+        keyboard = [
+            [InlineKeyboardButton("📊 Состояние БД", callback_data="admin_db")],
+            [InlineKeyboardButton("🔑 Проверить API", callback_data="admin_api")],
+            [InlineKeyboardButton("🔄 Статус парсера", callback_data="admin_parser")],
+            [InlineKeyboardButton("⚡ Запустить парсинг", callback_data="admin_force_parse")],
+            [InlineKeyboardButton("📈 Полная статистика", callback_data="admin_full_stats")]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        admin_text = f"""
+🔧 **Административная панель**
+
+Добро пожаловать, администратор!
+
+**Доступные функции:**
+📊 **Состояние БД** - подробная информация о базе данных
+🔑 **Проверить API** - тестирование OpenRouter API
+🔄 **Статус парсера** - мониторинг системы парсинга
+⚡ **Запустить парсинг** - принудительное обновление каталога
+📈 **Полная статистика** - детальная аналитика
+
+🕐 Время: {datetime.now().strftime('%H:%M:%S %d.%m.%Y')}
+        """
+        
+        await update.callback_query.edit_message_text(
+            admin_text,
+            parse_mode='Markdown',
+            reply_markup=reply_markup
+        )
+
+    async def _handle_admin_db_callback(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Обрабатывает callback для информации о БД"""
+        user_id = update.effective_user.id
+        
+        if user_id != self.config.admin_user_id:
+            await update.callback_query.edit_message_text("❌ У вас нет прав доступа к админ-панели")
+            return
+        
+        await update.callback_query.edit_message_text("🔍 Получаю информацию о базе данных...")
+        
+        try:
+            db_info = self.db.get_detailed_database_info()
+            
+            # Формируем отчет (укороченная версия для callback)
+            report = f"📊 **База данных**\n\n"
+            report += f"💾 **Размер:** {db_info['database_size']}\n\n"
+            
+            # Информация о таблицах
+            report += "📋 **Таблицы:**\n"
+            for table, info in db_info['tables'].items():
+                status = "✅" if info['exists'] else "❌"
+                report += f"{status} `{table}`: {info['count']}\n"
+            
+            # Топ брендов
+            if 'top_brands' in db_info['perfume_stats']:
+                report += f"\n🌸 **Топ-3 бренда:**\n"
+                for brand in db_info['perfume_stats']['top_brands'][:3]:
+                    report += f"• {brand['brand']}: {brand['count']}\n"
+            
+            await update.callback_query.edit_message_text(
+                report,
+                parse_mode='Markdown',
+                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔧 Админ-панель", callback_data="admin_panel")]])
+            )
+            
+        except Exception as e:
+            await update.callback_query.edit_message_text(f"❌ Ошибка: {e}")
+
+    async def _handle_admin_api_callback(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Обрабатывает callback для проверки API"""
+        user_id = update.effective_user.id
+        
+        if user_id != self.config.admin_user_id:
+            await update.callback_query.edit_message_text("❌ У вас нет прав доступа к админ-панели")
+            return
+        
+        await update.callback_query.edit_message_text("🔍 Проверяю состояние API...")
+        
+        try:
+            api_status = await self.ai.check_api_status()
+            
+            status_icon = "✅" if api_status['api_key_valid'] else "❌"
+            report = f"🔑 **API Status** {status_icon}\n\n"
+            
+            report += f"🔐 **Key:** `{api_status['api_key_masked']}`\n"
+            report += f"🤖 **Model:** `{api_status['model']}`\n"
+            
+            if api_status['response_time']:
+                report += f"⚡ **Response:** {api_status['response_time']}s\n"
+            
+            if api_status['api_key_valid']:
+                report += f"✅ **Status:** Working\n"
+            else:
+                report += f"❌ **Error:** {api_status.get('error', 'Unknown')[:50]}...\n"
+            
+            await update.callback_query.edit_message_text(
+                report,
+                parse_mode='Markdown',
+                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔧 Админ-панель", callback_data="admin_panel")]])
+            )
+            
+        except Exception as e:
+            await update.callback_query.edit_message_text(f"❌ Ошибка: {e}")
+
+    async def _handle_admin_parser_callback(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Обрабатывает callback для статуса парсера"""
+        user_id = update.effective_user.id
+        
+        if user_id != self.config.admin_user_id:
+            await update.callback_query.edit_message_text("❌ У вас нет прав доступа к админ-панели")
+            return
+        
+        await update.callback_query.edit_message_text("🔍 Получаю статус парсера...")
+        
+        try:
+            parser_status = self.auto_parser.get_parser_status()
+            
+            status_icon = "🔄" if parser_status['is_running'] else "⏸️"
+            report = f"🔄 **Parser Status** {status_icon}\n\n"
+            
+            report += f"• Running: {'✅' if parser_status['running_since_start'] else '❌'}\n"
+            report += f"• Active: {'✅' if parser_status['is_running'] else '❌'}\n"
+            
+            stats = parser_status['statistics']
+            report += f"\n📈 **Stats:**\n"
+            report += f"• Total: {stats['total_runs']}\n"
+            report += f"• Success: {stats['successful_runs']}\n"
+            report += f"• Errors: {stats['failed_runs']}\n"
+            
+            await update.callback_query.edit_message_text(
+                report,
+                parse_mode='Markdown',
+                reply_markup=InlineKeyboardMarkup([
+                    [InlineKeyboardButton("⚡ Run Parser", callback_data="admin_force_parse")],
+                    [InlineKeyboardButton("🔧 Admin Panel", callback_data="admin_panel")]
+                ])
+            )
+            
+        except Exception as e:
+            await update.callback_query.edit_message_text(f"❌ Ошибка: {e}")
+
+    async def _handle_admin_force_parse_callback(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Обрабатывает callback для принудительного парсинга"""
+        user_id = update.effective_user.id
+        
+        if user_id != self.config.admin_user_id:
+            await update.callback_query.edit_message_text("❌ У вас нет прав доступа к админ-панели")
+            return
+        
+        # Проверяем статус парсера
+        parser_status = self.auto_parser.get_parser_status()
+        if parser_status['is_running']:
+            await update.callback_query.edit_message_text(
+                "⚠️ Парсер уже выполняется",
+                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔄 Статус", callback_data="admin_parser")]])
+            )
+            return
+        
+        await update.callback_query.edit_message_text("🔄 Запускаю парсинг...")
+        
+        try:
+            result = await self.auto_parser.force_parse_catalog(admin_user_id=user_id)
+            
+            status_icon = "✅" if result['success'] else "❌"
+            report = f"🔄 **Parse Result** {status_icon}\n\n"
+            report += f"⏰ **Time:** {result['execution_time']}s\n"
+            
+            if result['success']:
+                report += f"• Added: {result['items_added']}\n"
+                report += f"• Updated: {result['items_updated']}\n"
+            else:
+                report += f"❌ **Errors:**\n"
+                for error in result['errors'][:2]:
+                    report += f"• {error[:50]}...\n"
+            
+            await update.callback_query.edit_message_text(
+                report,
+                parse_mode='Markdown',
+                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔧 Админ-панель", callback_data="admin_panel")]])
+            )
+            
+        except Exception as e:
+            await update.callback_query.edit_message_text(f"❌ Ошибка: {e}")
+
+    async def _handle_admin_full_stats_callback(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Обрабатывает callback для полной статистики"""
+        user_id = update.effective_user.id
+        
+        if user_id != self.config.admin_user_id:
+            await update.callback_query.edit_message_text("❌ У вас нет прав доступа к админ-панели")
+            return
+        
+        await update.callback_query.edit_message_text("📊 Собираю полную статистику...")
+        
+        try:
+            # Получаем всю статистику
+            basic_stats = self.db.get_admin_statistics()
+            db_info = self.db.get_detailed_database_info()
+            parser_status = self.auto_parser.get_parser_status()
+            
+            report = f"📈 **Полная статистика системы**\n\n"
+            
+            # Основные цифры
+            report += f"👥 **Пользователи:** {basic_stats['total_users']} (активных сегодня: {basic_stats['active_users_today']})\n"
+            report += f"🌸 **Парфюмы:** {basic_stats['total_perfumes']}\n"
+            report += f"❓ **Вопросов:** {basic_stats['total_questions']}\n"
+            report += f"📝 **Квизов:** {basic_stats['total_quizzes']}\n"
+            report += f"🔑 **API токенов сегодня:** {basic_stats['api_usage_today']}\n\n"
+            
+            # Статус систем
+            report += f"💾 **БД размер:** {db_info['database_size']}\n"
+            parser_icon = "🔄" if parser_status['is_running'] else "⏸️"
+            report += f"🔄 **Парсер:** {parser_icon} ({parser_status['statistics']['total_runs']} запусков)\n\n"
+            
+            # Топ активности
+            if db_info['top_users']:
+                report += f"🏆 **Топ пользователь:** {db_info['top_users'][0]['activity_count']} действий\n"
+            
+            if 'top_brands' in db_info['perfume_stats']:
+                top_brand = db_info['perfume_stats']['top_brands'][0]
+                report += f"🌟 **Топ бренд:** {top_brand['brand']} ({top_brand['count']} ароматов)\n"
+            
+            await update.callback_query.edit_message_text(
+                report,
+                parse_mode='Markdown',
+                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔧 Админ-панель", callback_data="admin_panel")]])
+            )
+            
+        except Exception as e:
+            await update.callback_query.edit_message_text(f"❌ Ошибка: {e}")
 
     def run(self):
         """Запускает бота"""

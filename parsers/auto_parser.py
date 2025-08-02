@@ -6,6 +6,8 @@ import schedule
 import logging
 import json
 import hashlib
+import time
+import os
 from datetime import datetime, timedelta
 from typing import Dict, List, Any, Optional
 
@@ -22,8 +24,175 @@ class AutoParser:
         self.config = config
         self.running = False
         self.last_catalog_hash = None
+        self.parser_status = {
+            'is_running': False,
+            'current_operation': None,
+            'last_operation_time': None,
+            'next_scheduled_run': None,
+            'statistics': {
+                'total_runs': 0,
+                'successful_runs': 0,
+                'failed_runs': 0,
+                'last_items_added': 0,
+                'last_items_updated': 0
+            }
+        }
         
         logger.info("🔄 AutoParser инициализирован")
+    
+    def get_parser_status(self) -> Dict[str, Any]:
+        """Получает подробный статус парсера"""
+        status = self.parser_status.copy()
+        
+        # Добавляем дополнительную информацию
+        status['uptime'] = datetime.now().isoformat()
+        status['running_since_start'] = self.running
+        
+        # Получаем статистику из базы данных
+        try:
+            db_stats = self.db.get_parser_statistics()
+            status['database_statistics'] = db_stats
+        except Exception as e:
+            status['database_statistics'] = {'error': str(e)}
+        
+        # Проверяем наличие исходных файлов
+        status['source_files'] = self._check_source_files()
+        
+        # Информация о планировщике
+        if hasattr(self, '_next_run_time'):
+            status['next_scheduled_run'] = self._next_run_time
+        
+        return status
+    
+    def _check_source_files(self) -> Dict[str, Any]:
+        """Проверяет наличие и состояние исходных файлов"""
+        files_info = {}
+        
+        # Список файлов для проверки
+        source_files = [
+            'full_perfumes_catalog_complete.json',
+            'perfumes.db'
+        ]
+        
+        for filename in source_files:
+            file_info = {
+                'exists': False,
+                'size': 0,
+                'last_modified': None,
+                'readable': False
+            }
+            
+            try:
+                if os.path.exists(filename):
+                    import os
+                    file_info['exists'] = True
+                    file_info['size'] = os.path.getsize(filename)
+                    file_info['last_modified'] = datetime.fromtimestamp(os.path.getmtime(filename)).isoformat()
+                    file_info['readable'] = os.access(filename, os.R_OK)
+            except Exception as e:
+                file_info['error'] = str(e)
+            
+            files_info[filename] = file_info
+        
+        return files_info
+    
+    async def force_parse_catalog(self, admin_user_id: int = None) -> Dict[str, Any]:
+        """Принудительно запускает парсинг каталога с полным логированием"""
+        start_time = time.time()
+        
+        result = {
+            'success': False,
+            'items_added': 0,
+            'items_updated': 0,
+            'execution_time': 0,
+            'errors': [],
+            'details': {},
+            'started_by': admin_user_id,
+            'start_time': datetime.now().isoformat()
+        }
+        
+        try:
+            # Обновляем статус
+            self.parser_status['is_running'] = True
+            self.parser_status['current_operation'] = 'manual_parse'
+            self.parser_status['last_operation_time'] = datetime.now().isoformat()
+            
+            logger.info(f"🔄 Запуск принудительного парсинга (админ: {admin_user_id})")
+            
+            # Проверяем исходные файлы
+            source_check = self._check_source_files()
+            result['source_files_status'] = source_check
+            
+            # Загружаем данные из JSON
+            json_file = 'full_perfumes_catalog_complete.json'
+            if not source_check.get(json_file, {}).get('exists', False):
+                raise Exception(f"Файл {json_file} не найден")
+            
+            # Парсим данные
+            with open(json_file, 'r', encoding='utf-8') as f:
+                catalog_data = json.load(f)
+            
+            result['total_items_in_source'] = len(catalog_data)
+            
+            # Обрабатываем данные
+            before_count = self.db.count_perfumes()
+            
+            processed_result = await self.data_processor.process_catalog_data(catalog_data)
+            
+            after_count = self.db.count_perfumes()
+            
+            result['items_added'] = processed_result.get('added', 0)
+            result['items_updated'] = processed_result.get('updated', 0)
+            result['items_before'] = before_count
+            result['items_after'] = after_count
+            result['success'] = True
+            
+            # Обновляем статистику
+            self.parser_status['statistics']['total_runs'] += 1
+            self.parser_status['statistics']['successful_runs'] += 1
+            self.parser_status['statistics']['last_items_added'] = result['items_added']
+            self.parser_status['statistics']['last_items_updated'] = result['items_updated']
+            
+            logger.info(f"✅ Парсинг завершен: +{result['items_added']}, ~{result['items_updated']}")
+            
+        except Exception as e:
+            error_msg = str(e)
+            result['errors'].append(error_msg)
+            
+            # Обновляем статистику ошибок
+            self.parser_status['statistics']['total_runs'] += 1
+            self.parser_status['statistics']['failed_runs'] += 1
+            
+            logger.error(f"❌ Ошибка при парсинге: {error_msg}")
+            
+        finally:
+            # Завершаем операцию
+            execution_time = time.time() - start_time
+            result['execution_time'] = round(execution_time, 2)
+            
+            self.parser_status['is_running'] = False
+            self.parser_status['current_operation'] = None
+            
+            # Логируем в базу данных
+            try:
+                self.db.log_parser_execution(
+                    status='success' if result['success'] else 'error',
+                    items_added=result['items_added'],
+                    items_updated=result['items_updated'],
+                    source='manual_admin_trigger',
+                    error_message='; '.join(result['errors']) if result['errors'] else None,
+                    execution_time=execution_time,
+                    metadata={
+                        'admin_user_id': admin_user_id,
+                        'total_items_processed': result.get('total_items_in_source', 0),
+                        'source_files_status': result.get('source_files_status', {})
+                    }
+                )
+            except Exception as log_error:
+                logger.error(f"❌ Ошибка при логировании парсера: {log_error}")
+                result['errors'].append(f"Logging error: {str(log_error)}")
+        
+        return result
     
     async def start_scheduler(self):
         """Запускает планировщик автоматического парсинга"""

@@ -191,6 +191,75 @@ class AIProcessor:
             await self.session.close()
             logger.info("🔌 HTTP сессия AIProcessor закрыта")
     
+    async def check_api_status(self) -> Dict[str, Any]:
+        """Проверяет состояние API ключа"""
+        status = {
+            'api_key_valid': False,
+            'api_key_masked': self.api_key[:8] + "..." + self.api_key[-4:] if len(self.api_key) > 12 else "***",
+            'model': self.model,
+            'base_url': self.base_url,
+            'last_check': datetime.now().isoformat(),
+            'response_time': None,
+            'error': None,
+            'test_successful': False
+        }
+        
+        try:
+            start_time = datetime.now()
+            
+            # Отправляем тестовый запрос
+            session = await self._get_session()
+            
+            test_payload = {
+                "model": self.model,
+                "messages": [
+                    {
+                        "role": "user", 
+                        "content": "Ответь одним словом: работает"
+                    }
+                ],
+                "max_tokens": 10,
+                "temperature": 0
+            }
+            
+            async with session.post(f"{self.base_url}/chat/completions", json=test_payload) as response:
+                response_time = (datetime.now() - start_time).total_seconds()
+                status['response_time'] = round(response_time, 2)
+                
+                if response.status == 200:
+                    data = await response.json()
+                    if 'choices' in data and len(data['choices']) > 0:
+                        test_response = data['choices'][0]['message']['content'].strip().lower()
+                        status['api_key_valid'] = True
+                        status['test_successful'] = 'работа' in test_response or 'работ' in test_response
+                        
+                        # Дополнительная информация из ответа
+                        if 'usage' in data:
+                            status['tokens_used'] = data['usage'].get('total_tokens', 0)
+                        
+                        if 'model' in data:
+                            status['actual_model'] = data['model']
+                    else:
+                        status['error'] = "Некорректный формат ответа API"
+                elif response.status == 401:
+                    status['error'] = "Неверный API ключ (401 Unauthorized)"
+                elif response.status == 429:
+                    status['error'] = "Превышен лимит запросов (429 Too Many Requests)"
+                elif response.status == 403:
+                    status['error'] = "Доступ запрещен (403 Forbidden)"
+                else:
+                    error_text = await response.text()
+                    status['error'] = f"HTTP {response.status}: {error_text[:200]}"
+                    
+        except asyncio.TimeoutError:
+            status['error'] = "Превышено время ожидания ответа"
+        except aiohttp.ClientError as e:
+            status['error'] = f"Ошибка соединения: {str(e)}"
+        except Exception as e:
+            status['error'] = f"Неизвестная ошибка: {str(e)}"
+        
+        return status
+
     def __del__(self):
         """Деструктор"""
         if hasattr(self, 'session') and self.session and not self.session.closed:

@@ -555,6 +555,242 @@ class DatabaseManager:
             stats['api_usage_today'] = cursor.fetchone()['total']
             
             return stats
+
+    def get_detailed_database_info(self) -> Dict[str, Any]:
+        """Получает подробную информацию о базе данных для админ-панели"""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            
+            info = {
+                'database_path': self.db_path,
+                'database_size': self._get_database_size(),
+                'tables': {},
+                'recent_activity': {},
+                'top_users': [],
+                'perfume_stats': {},
+                'errors': []
+            }
+            
+            try:
+                # Информация о таблицах
+                tables = ['perfumes', 'users', 'user_sessions', 'usage_stats']
+                for table in tables:
+                    try:
+                        cursor.execute(f"SELECT COUNT(*) as count FROM {table}")
+                        count = cursor.fetchone()['count']
+                        
+                        cursor.execute(f"SELECT name FROM sqlite_master WHERE type='table' AND name=?", (table,))
+                        exists = cursor.fetchone() is not None
+                        
+                        info['tables'][table] = {
+                            'count': count,
+                            'exists': exists
+                        }
+                        
+                        # Дополнительная информация для каждой таблицы
+                        if table == 'perfumes':
+                            # Статистика по брендам
+                            cursor.execute("""
+                                SELECT brand, COUNT(*) as count 
+                                FROM perfumes 
+                                GROUP BY brand 
+                                ORDER BY count DESC 
+                                LIMIT 10
+                            """)
+                            info['perfume_stats']['top_brands'] = [dict(row) for row in cursor.fetchall()]
+                            
+                            # Статистика по гендеру
+                            cursor.execute("""
+                                SELECT gender, COUNT(*) as count 
+                                FROM perfumes 
+                                GROUP BY gender 
+                                ORDER BY count DESC
+                            """)
+                            info['perfume_stats']['by_gender'] = [dict(row) for row in cursor.fetchall()]
+                            
+                        elif table == 'users':
+                            # Топ активных пользователей
+                            cursor.execute("""
+                                SELECT u.telegram_id, u.username, u.first_name, 
+                                       COUNT(us.id) as activity_count,
+                                       MAX(us.created_at) as last_activity
+                                FROM users u
+                                LEFT JOIN usage_stats us ON u.telegram_id = us.user_id
+                                GROUP BY u.telegram_id
+                                ORDER BY activity_count DESC
+                                LIMIT 10
+                            """)
+                            info['top_users'] = [dict(row) for row in cursor.fetchall()]
+                            
+                    except Exception as e:
+                        info['errors'].append(f"Ошибка при анализе таблицы {table}: {str(e)}")
+                
+                # Активность за последние дни
+                cursor.execute("""
+                    SELECT DATE(created_at) as date, 
+                           action_type,
+                           COUNT(*) as count
+                    FROM usage_stats 
+                    WHERE created_at >= datetime('now', '-7 days')
+                    GROUP BY DATE(created_at), action_type
+                    ORDER BY date DESC
+                """)
+                activity_data = cursor.fetchall()
+                
+                activity_by_date = {}
+                for row in activity_data:
+                    date = row['date']
+                    if date not in activity_by_date:
+                        activity_by_date[date] = {}
+                    activity_by_date[date][row['action_type']] = row['count']
+                
+                info['recent_activity'] = activity_by_date
+                
+                # Статистика API использования
+                cursor.execute("""
+                    SELECT DATE(created_at) as date,
+                           COUNT(*) as requests,
+                           COALESCE(SUM(api_tokens_used), 0) as total_tokens,
+                           COALESCE(AVG(api_tokens_used), 0) as avg_tokens
+                    FROM usage_stats 
+                    WHERE created_at >= datetime('now', '-30 days')
+                    AND api_tokens_used > 0
+                    GROUP BY DATE(created_at)
+                    ORDER BY date DESC
+                    LIMIT 10
+                """)
+                info['api_usage'] = [dict(row) for row in cursor.fetchall()]
+                
+            except Exception as e:
+                info['errors'].append(f"Общая ошибка при получении информации о БД: {str(e)}")
+            
+            return info
+
+    def get_parser_statistics(self) -> Dict[str, Any]:
+        """Получает статистику работы парсера"""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            
+            stats = {
+                'last_parse_time': None,
+                'total_parses': 0,
+                'successful_parses': 0,
+                'failed_parses': 0,
+                'items_added_last_parse': 0,
+                'items_updated_last_parse': 0,
+                'parse_history': [],
+                'errors': []
+            }
+            
+            try:
+                # Проверяем, есть ли таблица для статистики парсера
+                cursor.execute("""
+                    SELECT name FROM sqlite_master 
+                    WHERE type='table' AND name='parser_logs'
+                """)
+                
+                if cursor.fetchone():
+                    # Получаем последний парсинг
+                    cursor.execute("""
+                        SELECT * FROM parser_logs 
+                        ORDER BY created_at DESC 
+                        LIMIT 1
+                    """)
+                    last_parse = cursor.fetchone()
+                    if last_parse:
+                        stats['last_parse_time'] = last_parse['created_at']
+                        stats['items_added_last_parse'] = last_parse.get('items_added', 0)
+                        stats['items_updated_last_parse'] = last_parse.get('items_updated', 0)
+                    
+                    # Общая статистика
+                    cursor.execute("""
+                        SELECT 
+                            COUNT(*) as total,
+                            SUM(CASE WHEN status = 'success' THEN 1 ELSE 0 END) as successful,
+                            SUM(CASE WHEN status = 'error' THEN 1 ELSE 0 END) as failed
+                        FROM parser_logs
+                    """)
+                    totals = cursor.fetchone()
+                    if totals:
+                        stats['total_parses'] = totals['total']
+                        stats['successful_parses'] = totals['successful']
+                        stats['failed_parses'] = totals['failed']
+                    
+                    # История парсинга
+                    cursor.execute("""
+                        SELECT * FROM parser_logs 
+                        ORDER BY created_at DESC 
+                        LIMIT 20
+                    """)
+                    stats['parse_history'] = [dict(row) for row in cursor.fetchall()]
+                else:
+                    stats['errors'].append("Таблица parser_logs не существует")
+                    
+            except Exception as e:
+                stats['errors'].append(f"Ошибка при получении статистики парсера: {str(e)}")
+            
+            return stats
+
+    def _get_database_size(self) -> str:
+        """Получает размер файла базы данных"""
+        try:
+            if os.path.exists(self.db_path):
+                size_bytes = os.path.getsize(self.db_path)
+                
+                # Конвертируем в удобный формат
+                if size_bytes < 1024:
+                    return f"{size_bytes} B"
+                elif size_bytes < 1024 * 1024:
+                    return f"{size_bytes / 1024:.1f} KB"
+                elif size_bytes < 1024 * 1024 * 1024:
+                    return f"{size_bytes / (1024 * 1024):.1f} MB"
+                else:
+                    return f"{size_bytes / (1024 * 1024 * 1024):.1f} GB"
+            else:
+                return "Файл не найден"
+        except Exception as e:
+            return f"Ошибка: {str(e)}"
+
+    def create_parser_logs_table(self):
+        """Создает таблицу для логов парсера если она не существует"""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS parser_logs (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    status TEXT NOT NULL,
+                    items_added INTEGER DEFAULT 0,
+                    items_updated INTEGER DEFAULT 0,
+                    source TEXT,
+                    error_message TEXT,
+                    execution_time_seconds REAL,
+                    metadata TEXT
+                )
+            """)
+            conn.commit()
+
+    def log_parser_execution(self, status: str, items_added: int = 0, items_updated: int = 0, 
+                           source: str = None, error_message: str = None, 
+                           execution_time: float = None, metadata: Dict = None):
+        """Логирует выполнение парсера"""
+        try:
+            self.create_parser_logs_table()  # Убедимся что таблица существует
+            
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    INSERT INTO parser_logs 
+                    (status, items_added, items_updated, source, error_message, execution_time_seconds, metadata)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                """, (
+                    status, items_added, items_updated, source, error_message, 
+                    execution_time, json.dumps(metadata) if metadata else None
+                ))
+                conn.commit()
+                logger.info(f"📝 Логирование парсера: {status}, +{items_added}, ~{items_updated}")
+        except Exception as e:
+            logger.error(f"❌ Ошибка при логировании парсера: {e}")
     
     # === ВСПОМОГАТЕЛЬНЫЕ МЕТОДЫ ===
     
