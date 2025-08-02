@@ -741,13 +741,23 @@ class PerfumeBot:
             # Удаляем сообщение о обработке
             await processing_msg.delete()
             
-            # Отправляем ответ
-            await update.message.reply_text(
-                processed_response,
-                parse_mode='Markdown',
-                disable_web_page_preview=True,
-                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Главное меню", callback_data="back_to_menu")]])
-            )
+            # Безопасно отправляем ответ с защитой от ошибок форматирования
+            try:
+                await update.message.reply_text(
+                    processed_response,
+                    parse_mode='Markdown',
+                    disable_web_page_preview=True,
+                    reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Главное меню", callback_data="back_to_menu")]])
+                )
+            except Exception as format_error:
+                logger.warning(f"Ошибка форматирования ответа о парфюмах: {format_error}")
+                # Fallback к простому тексту без форматирования
+                plain_response = re.sub(r'[*_`\[\]()~>#+\-=|{}.!]', '', processed_response)[:4000]
+                await update.message.reply_text(
+                    plain_response,
+                    disable_web_page_preview=True,
+                    reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Главное меню", callback_data="back_to_menu")]])
+                )
             
             # Сохраняем статистику
             self.db.save_usage_stat(user_id, "perfume_question", None, message_text, len(processed_response))
@@ -776,20 +786,23 @@ class PerfumeBot:
             prompt = PromptTemplates.create_fragrance_info_prompt(message_text)
 
             # Получаем ответ от ИИ
-            ai_response = await self.ai.process_message(prompt, user_id)
+            ai_response_raw = await self.ai.process_message(prompt, user_id)
             
             # Проверяем, не вернулся ли ответ о кулдауне
-            if "Пожалуйста, подождите" in ai_response:
+            if "Пожалуйста, подождите" in ai_response_raw:
                 await searching_msg.delete()
-                await update.message.reply_text(ai_response)
+                await update.message.reply_text(ai_response_raw)
                 return
+            
+            # Обрабатываем ответ и добавляем ссылки по артикулам
+            ai_response = self.ai.process_ai_response_with_links(ai_response_raw, self.db)
             
             # Удаляем сообщение о поиске
             await searching_msg.delete()
             
             # Безопасно отправляем информацию с защитой от ошибок форматирования
             try:
-                # Применяем безопасное форматирование через ИИ процессор
+                # Применяем мягкое форматирование для сохранения красоты
                 safe_response = self.ai._format_text_for_telegram(ai_response)
                 
                 await update.message.reply_text(
