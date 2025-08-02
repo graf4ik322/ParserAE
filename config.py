@@ -23,9 +23,13 @@ class Config:
         
         # Админ
         admin_user_id_str = os.getenv('ADMIN_USER_ID', '0')
-        if admin_user_id_str == '123456789' or admin_user_id_str == '0':
+        if admin_user_id_str == '0' or not admin_user_id_str:
             raise ValueError("ADMIN_USER_ID не установлен в переменных окружения")
-        self.admin_user_id = int(admin_user_id_str)
+        
+        try:
+            self.admin_user_id = int(admin_user_id_str)
+        except ValueError:
+            raise ValueError("ADMIN_USER_ID должен быть числом")
         
         # База данных
         self.database_path = os.getenv('DATABASE_PATH', 'data/perfumes.db')
