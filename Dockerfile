@@ -25,6 +25,11 @@ RUN chmod +x main.py
 
 # Создаем пользователя для запуска приложения (безопасность)
 RUN useradd -m -u 1001 botuser && chown -R botuser:botuser /app
+
+# Устанавливаем правильные права на директории данных
+RUN chown -R botuser:botuser /app/data /app/logs
+RUN chmod 755 /app/data /app/logs
+
 USER botuser
 
 # Переменные окружения по умолчанию

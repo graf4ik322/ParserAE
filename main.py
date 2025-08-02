@@ -31,7 +31,7 @@ class PerfumeBot:
     def __init__(self):
         self.config = Config()
         self.db = DatabaseManager(self.config.database_path)
-        self.ai = AIProcessor(self.config.openrouter_api_key)
+        self.ai = AIProcessor(self.config.openrouter_api_key, self.config.openrouter_model)
         self.quiz = QuizSystem(self.db, self.ai)
         self.auto_parser = AutoParser(self.db)
         
@@ -395,9 +395,6 @@ class PerfumeBot:
 
     async def run(self):
         """Запускает бота"""
-        # Инициализируем базу данных
-        self.db.create_tables()
-        
         # Запускаем автопарсер в фоне
         asyncio.create_task(self.auto_parser.start_scheduler())
         

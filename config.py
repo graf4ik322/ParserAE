@@ -13,18 +13,19 @@ class Config:
     def __init__(self):
         # Telegram Bot
         self.bot_token = os.getenv('TELEGRAM_BOT_TOKEN', '')
-        if not self.bot_token:
+        if not self.bot_token or self.bot_token == 'your_telegram_bot_token_here':
             raise ValueError("TELEGRAM_BOT_TOKEN не установлен в переменных окружения")
         
         # OpenRouter API
         self.openrouter_api_key = os.getenv('OPENROUTER_API_KEY', '')
-        if not self.openrouter_api_key:
+        if not self.openrouter_api_key or self.openrouter_api_key == 'your_openrouter_api_key_here':
             raise ValueError("OPENROUTER_API_KEY не установлен в переменных окружения")
         
         # Админ
-        self.admin_user_id = int(os.getenv('ADMIN_USER_ID', '0'))
-        if self.admin_user_id == 0:
+        admin_user_id_str = os.getenv('ADMIN_USER_ID', '0')
+        if admin_user_id_str == '123456789' or admin_user_id_str == '0':
             raise ValueError("ADMIN_USER_ID не установлен в переменных окружения")
+        self.admin_user_id = int(admin_user_id_str)
         
         # База данных
         self.database_path = os.getenv('DATABASE_PATH', 'perfumes.db')

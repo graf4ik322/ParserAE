@@ -4,6 +4,7 @@
 import sqlite3
 import json
 import logging
+import os
 from datetime import datetime, timedelta
 from typing import Dict, Any, List, Optional, Tuple
 from contextlib import contextmanager
@@ -17,9 +18,23 @@ class DatabaseManager:
     
     def __init__(self, db_path: str):
         self.db_path = db_path
+        
+        # Создаем директорию для базы данных, если она не существует
+        db_dir = os.path.dirname(db_path)
+        if db_dir and not os.path.exists(db_dir):
+            os.makedirs(db_dir, exist_ok=True)
+            logger.info(f"📁 Создана директория для базы данных: {db_dir}")
+        
         self._cache = {}
         self._cache_timestamps = {}
         logger.info(f"📊 DatabaseManager инициализирован: {db_path}")
+        
+        # Создаем таблицы при инициализации
+        try:
+            self.create_tables()
+        except Exception as e:
+            logger.error(f"❌ Ошибка при создании таблиц: {e}")
+            raise
     
     @contextmanager
     def get_connection(self):

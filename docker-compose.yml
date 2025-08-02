@@ -8,6 +8,7 @@ services:
     environment:
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
       - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+      - OPENROUTER_MODEL=${OPENROUTER_MODEL:-openai/gpt-4-turbo-preview}
       - ADMIN_USER_ID=${ADMIN_USER_ID}
       - DATABASE_PATH=/app/data/perfumes.db
       - LOG_LEVEL=INFO
