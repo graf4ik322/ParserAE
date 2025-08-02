@@ -35,65 +35,95 @@ class AIProcessor:
                     "HTTP-Referer": "https://perfume-bot.local",
                     "X-Title": "Perfume Bot"
                 },
-                timeout=aiohttp.ClientTimeout(total=180)  # 3 минуты для больших промптов
+                timeout=aiohttp.ClientTimeout(total=300)  # 5 минут для больших промптов
             )
         return self.session
     
-    async def call_openrouter_api(self, prompt: str, max_tokens: int = 4000) -> str:
-        """Отправляет запрос к OpenRouter API"""
-        try:
-            session = await self._get_session()
-            
-            payload = {
-                "model": self.model,
-                "messages": [
-                    {
-                        "role": "user",
-                        "content": prompt
-                    }
-                ],
-                "max_tokens": max_tokens,
-                "temperature": 0.7,
-                "top_p": 0.9,
-                "frequency_penalty": 0.1,
-                "presence_penalty": 0.1
-            }
-            
-            logger.info(f"🤖 Отправляем запрос к OpenRouter API (модель: {self.model})")
-            
-            async with session.post(f"{self.base_url}/chat/completions", json=payload) as response:
-                if response.status == 200:
-                    data = await response.json()
-                    
-                    if 'choices' in data and len(data['choices']) > 0:
-                        content = data['choices'][0]['message']['content']
+    async def call_openrouter_api(self, prompt: str, max_tokens: int = 4000, max_retries: int = 3) -> str:
+        """Отправляет запрос к OpenRouter API с retry логикой"""
+        
+        payload = {
+            "model": self.model,
+            "messages": [
+                {
+                    "role": "user",
+                    "content": prompt
+                }
+            ],
+            "max_tokens": max_tokens,
+            "temperature": 0.7,
+            "top_p": 0.9,
+            "frequency_penalty": 0.1,
+            "presence_penalty": 0.1
+        }
+        
+        for attempt in range(max_retries):
+            try:
+                session = await self._get_session()
+                
+                logger.info(f"🤖 Отправляем запрос к OpenRouter API (модель: {self.model}, попытка {attempt + 1}/{max_retries})")
+                
+                async with session.post(f"{self.base_url}/chat/completions", json=payload) as response:
+                    if response.status == 200:
+                        data = await response.json()
                         
-                        # Логируем использование токенов
-                        usage = data.get('usage', {})
-                        total_tokens = usage.get('total_tokens', 0)
-                        logger.info(f"✅ Получен ответ от ИИ ({total_tokens} токенов)")
+                        if 'choices' in data and len(data['choices']) > 0:
+                            content = data['choices'][0]['message']['content']
+                            
+                            # Логируем использование токенов
+                            usage = data.get('usage', {})
+                            total_tokens = usage.get('total_tokens', 0)
+                            logger.info(f"✅ Получен ответ от ИИ ({total_tokens} токенов)")
+                            
+                            return content
+                        else:
+                            logger.error("Неожиданная структура ответа от OpenRouter API")
+                            if attempt == max_retries - 1:
+                                return "Извините, произошла ошибка при получении ответа."
+                            continue
+                            
+                    elif response.status == 429:
+                        logger.warning(f"Rate limit превышен для OpenRouter API (попытка {attempt + 1}/{max_retries})")
+                        if attempt == max_retries - 1:
+                            return "Извините, сервер перегружен. Попробуйте через несколько минут."
+                        # Ожидаем перед повторной попыткой при rate limit
+                        await asyncio.sleep(2 ** attempt)  # Exponential backoff
+                        continue
                         
-                        return content
+                    elif response.status >= 500:
+                        # Серверные ошибки - можно повторить попытку
+                        error_text = await response.text()
+                        logger.warning(f"Серверная ошибка OpenRouter API ({response.status}): {error_text[:200]} (попытка {attempt + 1}/{max_retries})")
+                        if attempt == max_retries - 1:
+                            return "Извините, произошла ошибка на сервере ИИ. Попробуйте позже."
+                        await asyncio.sleep(1)  # Короткая пауза при серверных ошибках
+                        continue
+                        
                     else:
-                        logger.error("Неожиданная структура ответа от OpenRouter API")
-                        return "Извините, произошла ошибка при получении ответа."
+                        # Клиентские ошибки - не повторяем
+                        error_text = await response.text()
+                        logger.error(f"Ошибка OpenRouter API ({response.status}): {error_text}")
+                        return "Извините, произошла ошибка при обращении к ИИ. Попробуйте позже."
                         
-                elif response.status == 429:
-                    logger.warning("Rate limit превышен для OpenRouter API")
-                    return "Извините, сервер перегружен. Попробуйте через несколько минут."
-                    
-                else:
-                    error_text = await response.text()
-                    logger.error(f"Ошибка OpenRouter API ({response.status}): {error_text}")
-                    return "Извините, произошла ошибка при обращении к ИИ. Попробуйте позже."
-                    
-        except asyncio.TimeoutError:
-            logger.error("Таймаут при обращении к OpenRouter API")
-            return "Извините, превышено время ожидания ответа. Попробуйте позже."
-            
-        except Exception as e:
-            logger.error(f"Неожиданная ошибка при обращении к OpenRouter API: {e}")
-            return "Извините, произошла неожиданная ошибка. Попробуйте позже."
+            except asyncio.TimeoutError:
+                logger.warning(f"Таймаут при обращении к OpenRouter API (попытка {attempt + 1}/{max_retries})")
+                if attempt == max_retries - 1:
+                    return "Извините, превышено время ожидания ответа. Попробуйте позже."
+                continue
+                
+            except aiohttp.ClientError as e:
+                logger.warning(f"Ошибка соединения с OpenRouter API: {e} (попытка {attempt + 1}/{max_retries})")
+                if attempt == max_retries - 1:
+                    return "Извините, проблемы с соединением. Попробуйте позже."
+                await asyncio.sleep(1)
+                continue
+                
+            except Exception as e:
+                logger.error(f"Неожиданная ошибка при обращении к OpenRouter API: {e}")
+                return "Извините, произошла неожиданная ошибка. Попробуйте позже."
+        
+        # Если все попытки исчерпаны
+        return "Извините, не удалось получить ответ от ИИ. Попробуйте позже."
     
     def create_perfume_question_prompt(self, user_question: str, perfumes_data: List[Dict[str, Any]]) -> str:
         """Создает промпт для вопроса о парфюмах"""
