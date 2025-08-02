@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  perfume-bot:
+    build: .
+    container_name: perfume-bot
+    restart: unless-stopped
+    environment:
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+      - ADMIN_USER_ID=${ADMIN_USER_ID}
+      - DATABASE_PATH=/app/data/perfumes.db
+      - LOG_LEVEL=INFO
+      - API_COOLDOWN_SECONDS=30
+      - MAX_TOKENS_PER_REQUEST=8000
+      - PARSE_INTERVAL_HOURS=6
+      - PARSER_MAX_WORKERS=3
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+    ports:
+      - "8080:8080"  # Для возможного веб-интерфейса в будущем
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:8080/health', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  perfume_data:
+    driver: local
