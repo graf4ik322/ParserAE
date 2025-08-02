@@ -61,6 +61,8 @@ class PerfumeBot:
         """Обработчик команды /start"""
         user = update.effective_user
         
+        logger.info(f"📨 Получена команда /start от пользователя {user.id} (@{user.username})")
+        
         # Получаем или создаем пользователя
         user_data = self.db.get_or_create_user(
             telegram_id=user.id,
@@ -403,6 +405,8 @@ class PerfumeBot:
         await self.application.start()
         
         logger.info("🚀 Perfume Bot запущен и готов к работе!")
+        logger.info(f"🤖 Bot username: @{self.application.bot.username}")
+        logger.info(f"🔗 Bot link: https://t.me/{self.application.bot.username}")
         
         # Обработка graceful shutdown
         def signal_handler(sig, frame):
@@ -412,8 +416,10 @@ class PerfumeBot:
         signal.signal(signal.SIGINT, signal_handler)
         signal.signal(signal.SIGTERM, signal_handler)
         
-        # Запускаем polling
-        await self.application.updater.start_polling()
+        # Запускаем polling с логированием
+        logger.info("📡 Запускаем polling для получения обновлений...")
+        await self.application.updater.start_polling(drop_pending_updates=True)
+        logger.info("✅ Polling запущен успешно")
         await self.application.updater.idle()
 
 def main():
