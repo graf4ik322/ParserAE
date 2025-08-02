@@ -5,6 +5,8 @@ import logging
 import asyncio
 import signal
 import sys
+import os
+import fcntl
 from datetime import datetime
 
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
@@ -34,6 +36,7 @@ class PerfumeBot:
         self.ai = AIProcessor(self.config.openrouter_api_key, self.config.openrouter_model)
         self.quiz = QuizSystem(self.db, self.ai)
         self.auto_parser = AutoParser(self.db)
+        self.lock_file = None
         
         # Инициализация приложения
         self.application = Application.builder().token(self.config.bot_token).build()
@@ -42,6 +45,43 @@ class PerfumeBot:
         self._register_handlers()
         
         logger.info("🤖 Perfume Bot инициализирован")
+
+    def _acquire_lock(self):
+        """Создает файл-блокировку для предотвращения множественного запуска"""
+        lock_file_path = '/tmp/perfume_bot.lock'
+        try:
+            self.lock_file = open(lock_file_path, 'w')
+            fcntl.flock(self.lock_file.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+            self.lock_file.write(str(os.getpid()))
+            self.lock_file.flush()
+            logger.info("🔒 Блокировка получена успешно")
+            return True
+        except IOError:
+            logger.error("❌ Другой экземпляр бота уже запущен!")
+            if self.lock_file:
+                self.lock_file.close()
+            return False
+
+    def _release_lock(self):
+        """Освобождает файл-блокировку"""
+        if self.lock_file:
+            try:
+                fcntl.flock(self.lock_file.fileno(), fcntl.LOCK_UN)
+                self.lock_file.close()
+                os.unlink('/tmp/perfume_bot.lock')
+                logger.info("🔓 Блокировка освобождена")
+            except Exception as e:
+                logger.error(f"Ошибка при освобождении блокировки: {e}")
+
+    def _setup_signal_handlers(self):
+        """Настраивает обработчики сигналов для корректного завершения"""
+        def signal_handler(signum, frame):
+            logger.info(f"🛑 Получен сигнал {signum}, завершаем работу...")
+            self._release_lock()
+            sys.exit(0)
+        
+        signal.signal(signal.SIGTERM, signal_handler)
+        signal.signal(signal.SIGINT, signal_handler)
 
     def _register_handlers(self):
         """Регистрирует все обработчики команд и сообщений"""
@@ -75,8 +115,43 @@ class PerfumeBot:
     async def error_handler(self, update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
         """Обработчик ошибок"""
         logger.error(f"❌ Ошибка в обработчике: {context.error}")
-        if update and hasattr(update, 'message'):
-            await update.message.reply_text("❌ Произошла ошибка. Попробуйте позже.")
+        
+        try:
+            # Определяем тип update и отправляем соответствующий ответ
+            if update and hasattr(update, 'callback_query') and update.callback_query:
+                # Для callback_query ошибок
+                try:
+                    await update.callback_query.answer("❌ Произошла ошибка. Попробуйте позже.")
+                except Exception:
+                    pass  # Игнорируем если callback_query уже был обработан
+                
+                try:
+                    await update.callback_query.edit_message_text(
+                        "❌ Произошла ошибка. Попробуйте позже.",
+                        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Главное меню", callback_data="back_to_menu")]])
+                    )
+                except Exception:
+                    # Если не удается редактировать, отправляем новое сообщение
+                    try:
+                        await update.effective_chat.send_message(
+                            "❌ Произошла ошибка. Попробуйте позже.",
+                            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Главное меню", callback_data="back_to_menu")]])
+                        )
+                    except Exception:
+                        pass
+                        
+            elif update and hasattr(update, 'message') and update.message:
+                # Для message ошибок
+                try:
+                    await update.message.reply_text(
+                        "❌ Произошла ошибка. Попробуйте позже.",
+                        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Главное меню", callback_data="back_to_menu")]])
+                    )
+                except Exception:
+                    pass
+                    
+        except Exception as e:
+            logger.error(f"❌ Ошибка в error_handler: {e}")
 
     async def start_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Обработчик команды /start"""
@@ -367,43 +442,55 @@ class PerfumeBot:
         """Обрабатывает запросы информации об аромате"""
         user_id = update.effective_user.id
         
+        # Проверяем кулдаун
+        if self.ai.is_api_cooldown_active(user_id):
+            await update.message.reply_text("⏱️ Пожалуйста, подождите 30 секунд перед следующим запросом")
+            return
+        
         # Отправляем уведомление о поиске
         searching_msg = await update.message.reply_text("🔍 Ищу информацию об аромате...")
         
         try:
-            # Получаем все парфюмы для поиска
-            all_perfumes = self.db.get_all_perfumes_from_database()
-            
-            # Ищем подходящие ароматы
-            matching_perfumes = self.ai.find_perfumes_by_query(message_text, all_perfumes)
-            
-            if not matching_perfumes:
-                await searching_msg.delete()
-                await update.message.reply_text(
-                    "😔 Не удалось найти информацию по вашему запросу. Попробуйте изменить поисковой запрос.",
-                    reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Главное меню", callback_data="back_to_menu")]])
-                )
-                return
-            
-            # Создаем промпт для информации об аромате
-            prompt = self.ai.create_fragrance_info_prompt(message_text, matching_perfumes)
-            
-            # Получаем информацию от ИИ
+            # Создаем промпт для поиска информации об аромате через AI
+            # Не используем базу данных - AI должен знать популярные ароматы
+            prompt = f"""Пользователь спрашивает об аромате: "{message_text}"
+
+Твоя задача - найти и рассказать об этом аромате, учитывая что пользователь мог допустить ошибки в названии.
+
+Инструкции:
+1. Попытайся понять, о каком именно аромате идет речь, даже если название написано неточно
+2. Если это известный аромат - расскажи о нем подробно:
+   - Полное название и бренд
+   - Год выпуска
+   - Описание аромата (верхние, средние, базовые ноты)
+   - Характер аромата (свежий, теплый, сладкий и т.д.)
+   - Для какого пола предназначен
+   - В каких случаях лучше носить
+   - Стойкость и шлейф
+3. Если название очень неточное - предложи несколько вариантов похожих ароматов
+4. Если аромат неизвестен - честно скажи об этом и предложи альтернативы
+
+Отвечай на русском языке, структурированно и информативно."""
+
+            # Получаем ответ от ИИ
             ai_response = await self.ai.call_openrouter_api(prompt, max_tokens=3000)
-            
-            # Обрабатываем ответ
-            processed_response = self.ai.process_ai_response_with_links(ai_response, self.db)
             
             # Удаляем сообщение о поиске
             await searching_msg.delete()
             
             # Отправляем информацию
             await update.message.reply_text(
-                processed_response,
+                ai_response,
                 parse_mode='Markdown',
                 disable_web_page_preview=True,
                 reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Главное меню", callback_data="back_to_menu")]])
             )
+            
+            # Сохраняем статистику
+            self.db.save_usage_stat(user_id, "fragrance_info", None, message_text, len(ai_response))
+            
+            # Устанавливаем кулдаун
+            self.ai.set_api_cooldown(user_id, 30)
             
             # Возвращаем в главное меню
             self.db.update_session_state(user_id, "MAIN_MENU")
@@ -419,25 +506,45 @@ class PerfumeBot:
     def run(self):
         """Запускает бота"""
         try:
+            # Проверяем, не запущен ли уже другой экземпляр
+            if not self._acquire_lock():
+                logger.error("❌ Бот уже запущен! Завершаем работу.")
+                sys.exit(1)
+            
+            # Настраиваем обработчики сигналов
+            self._setup_signal_handlers()
+            
             logger.info("🚀 Perfume Bot запущен и готов к работе!")
             
             # Запускаем polling с логированием
             logger.info("📡 Запускаем polling для получения обновлений...")
             self.application.run_polling(drop_pending_updates=True)
             
+        except KeyboardInterrupt:
+            logger.info("🛑 Бот остановлен пользователем")
         except Exception as e:
             logger.error(f"❌ Ошибка при запуске бота: {e}")
             raise
+        finally:
+            # Освобождаем блокировку при любом завершении
+            self._release_lock()
 
 def main():
     """Главная функция"""
+    bot = None
     try:
         bot = PerfumeBot()
         bot.run()
     except KeyboardInterrupt:
         logger.info("🛑 Бот остановлен пользователем")
+    except SystemExit:
+        # Нормальное завершение при множественном запуске
+        pass
     except Exception as e:
         logger.error(f"❌ Критическая ошибка: {e}")
+    finally:
+        if bot:
+            bot._release_lock()
 
 if __name__ == "__main__":
     main()

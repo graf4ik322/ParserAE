@@ -246,11 +246,35 @@ class QuizSystem:
         
         # Отправляем или редактируем сообщение
         if update.callback_query:
-            await update.callback_query.edit_message_text(
-                text=question_text,
-                reply_markup=reply_markup,
-                parse_mode='Markdown'
-            )
+            try:
+                # Получаем текущий текст сообщения для сравнения
+                current_text = update.callback_query.message.text if update.callback_query.message else ""
+                current_markup = update.callback_query.message.reply_markup if update.callback_query.message else None
+                
+                # Проверяем, отличается ли новый контент от текущего
+                markup_changed = str(current_markup) != str(reply_markup) if current_markup else True
+                text_changed = current_text != question_text
+                
+                if text_changed or markup_changed:
+                    await update.callback_query.edit_message_text(
+                        text=question_text,
+                        reply_markup=reply_markup,
+                        parse_mode='Markdown'
+                    )
+                else:
+                    # Если контент не изменился, просто отвечаем на callback
+                    await update.callback_query.answer()
+            except Exception as e:
+                logger.error(f"Ошибка при редактировании сообщения квиза: {e}")
+                # Если редактирование не удалось, отправляем новое сообщение
+                try:
+                    await update.effective_chat.send_message(
+                        text=question_text,
+                        reply_markup=reply_markup,
+                        parse_mode='Markdown'
+                    )
+                except Exception as e2:
+                    logger.error(f"Ошибка при отправке нового сообщения квиза: {e2}")
         else:
             await update.message.reply_text(
                 text=question_text,
@@ -365,116 +389,6 @@ class QuizSystem:
         
         return profile
     
-    async def _finish_quiz(self, update: Update, context: ContextTypes.DEFAULT_TYPE, quiz_answers: Dict):
-        """Завершает квиз и генерирует персональные рекомендации"""
-        user_id = update.effective_user.id
-        
-        try:
-            # Анализируем ответы и создаем профиль пользователя
-            user_profile = self._analyze_quiz_results(quiz_answers)
-            
-            # Сохраняем профиль пользователя
-            self.db.save_user_profile(user_id, user_profile)
-            
-            # Получаем все парфюмы
-            all_perfumes = self.db.get_all_perfumes_for_ai()
-            
-            if not all_perfumes:
-                await update.callback_query.edit_message_text(
-                    "❌ Извините, каталог парфюмов временно недоступен."
-                )
-                return
-            
-            # Фильтруем подходящие парфюмы на основе профиля
-            suitable_perfumes = self._filter_perfumes_by_profile(user_profile, all_perfumes)
-            
-            # Используем переданный AIProcessor
-            if not self.ai_processor:
-                await update.callback_query.edit_message_text(
-                    "❌ Извините, сервис рекомендаций временно недоступен."
-                )
-                return
-            ai_processor = self.ai_processor
-            
-            # Создаем промпт для ИИ
-            prompt = ai_processor.create_quiz_results_prompt(user_profile, suitable_perfumes)
-            
-            # Отправляем сообщение о генерации рекомендаций
-            await update.callback_query.edit_message_text("🧠 Анализирую ваши предпочтения и готовлю персональные рекомендации...")
-            
-            # Получаем ответ от ИИ
-            ai_response = await ai_processor.call_openrouter_api(prompt, max_tokens=6000)
-            
-            if ai_response.startswith("Извините"):
-                await context.bot.send_message(
-                    chat_id=user_id,
-                    text=f"❌ {ai_response}"
-                )
-                return
-            
-            # Обрабатываем ответ и добавляем ссылки "Приобрести"
-            processed_response = ai_processor.process_ai_response_with_links(ai_response, self.db)
-            
-            # Отправляем результат
-            await context.bot.send_message(
-                chat_id=user_id,
-                text=f"🎯 **Ваши персональные рекомендации:**\n\n{processed_response}",
-                parse_mode='Markdown',
-                disable_web_page_preview=True
-            )
-            
-            # Сохраняем статистику
-            self.db.save_usage_stat(user_id, 'quiz_completed')
-            
-            # Завершаем сессию
-            self.db.end_user_session(user_id)
-            
-            logger.info(f"👤 Пользователь {user_id} завершил квиз и получил персональные рекомендации")
-            
-        except Exception as e:
-            logger.error(f"Ошибка при завершении квиза для пользователя {user_id}: {e}")
-            await context.bot.send_message(
-                chat_id=user_id,
-                text="❌ Произошла ошибка при генерации рекомендаций. Попробуйте позже."
-            )
-    
-    def _filter_perfumes_by_profile(self, user_profile: Dict, all_perfumes: List[Dict]) -> List[Dict]:
-        """Фильтрует парфюмы на основе профиля пользователя"""
-        suitable = []
-        
-        # Базовые предпочтения
-        preferred_gender = user_profile.get('gender', '')
-        preferred_groups = user_profile.get('preferred_fragrance_groups', [])
-        budget_preference = user_profile.get('budget_preference', '')
-        
-        for perfume in all_perfumes:
-            # Проверяем соответствие полу
-            if preferred_gender and preferred_gender != 'unisex':
-                perfume_gender = perfume.get('gender', '').lower()
-                if perfume_gender and perfume_gender != 'унисекс' and preferred_gender.lower() not in perfume_gender:
-                    continue
-            
-            # Проверяем ароматические группы
-            if preferred_groups:
-                perfume_group = perfume.get('fragrance_group', '').lower()
-                group_match = any(group.lower() in perfume_group for group in preferred_groups)
-                if not group_match:
-                    continue
-            
-            # Проверяем бюджет (если указан)
-            if budget_preference and budget_preference != 'no_limit':
-                price = perfume.get('price', 0)
-                if budget_preference == 'budget' and price > 100:
-                    continue
-                elif budget_preference == 'medium' and (price < 50 or price > 200):
-                    continue
-                elif budget_preference == 'premium' and price < 150:
-                    continue
-            
-            suitable.append(perfume)
-        
-        # Если подходящих мало, добавляем популярные варианты
-        if len(suitable) < 10:
-            suitable.extend([p for p in all_perfumes if p not in suitable][:20])
-        
-        return suitable[:50]  # Ограничиваем количество для оптимизации
+    def _analyze_quiz_results(self, quiz_answers: Dict) -> Dict[str, Any]:
+        """Анализирует результаты квиза и создает профиль пользователя (совместимость)"""
+        return self._analyze_quiz_answers(quiz_answers)
