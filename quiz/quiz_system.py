@@ -6,197 +6,536 @@ from typing import Dict, List, Any, Optional
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
 from datetime import datetime
+import json
 
 logger = logging.getLogger(__name__)
 
 class QuizSystem:
-    """Система квизов для определения предпочтений пользователей"""
+    """Научно обоснованная система квизов на основе Edwards Fragrance Wheel"""
     
     def __init__(self, db_manager, ai_processor=None):
         self.db = db_manager
         self.ai_processor = ai_processor
         self.quiz_questions = self._initialize_quiz_questions()
-        logger.info("📝 QuizSystem инициализирована")
+        logger.info("📝 QuizSystem v3.0 (Edwards Fragrance Wheel) инициализирована")
     
     def _initialize_quiz_questions(self) -> List[Dict[str, Any]]:
-        """Инициализирует вопросы квиза"""
+        """Инициализирует 15 научно обоснованных вопросов квиза"""
         return [
+            # БЛОК 1: ДЕМОГРАФИЧЕСКИЙ (2 вопроса)
             {
                 "id": "gender",
-                "question": "👤 **Укажите ваш пол:**",
+                "block": "demographic",
+                "question": "👤 **Для кого предназначен аромат?**",
                 "type": "single_choice",
                 "options": [
-                    {"text": "👨 Мужской", "value": "Мужской"},
-                    {"text": "👩 Женский", "value": "Женский"},
-                    {"text": "🌈 Унисекс", "value": "Унисекс"}
+                    {
+                        "text": "👩 Для меня (женщина)",
+                        "value": "female",
+                        "keywords": ["женский", "feminine", "floral", "delicate"]
+                    },
+                    {
+                        "text": "👨 Для меня (мужчина)",
+                        "value": "male",
+                        "keywords": ["мужской", "masculine", "woody", "strong"]
+                    },
+                    {
+                        "text": "🌈 Унисекс",
+                        "value": "unisex",
+                        "keywords": ["унисекс", "unisex", "neutral", "balanced"]
+                    }
                 ]
             },
             {
-                "id": "age_group",
-                "question": "🎂 **Ваша возрастная группа:**",
+                "id": "age_experience",
+                "block": "demographic",
+                "question": "🎓 **Ваш опыт с парфюмерией?**",
                 "type": "single_choice",
                 "options": [
-                    {"text": "🌱 18-25 лет", "value": "18-25"},
-                    {"text": "🌿 26-35 лет", "value": "26-35"},
-                    {"text": "🌳 36-45 лет", "value": "36-45"},
-                    {"text": "🍂 46+ лет", "value": "46+"}
+                    {
+                        "text": "🌱 Новичок (первые ароматы)",
+                        "value": "beginner",
+                        "keywords": ["легкий", "простой", "классический", "популярный", "безопасный"]
+                    },
+                    {
+                        "text": "🌿 Имею базовый опыт",
+                        "value": "intermediate",
+                        "keywords": ["современный", "трендовый", "качественный", "сбалансированный"]
+                    },
+                    {
+                        "text": "🌳 Продвинутый (коллекционер)",
+                        "value": "advanced",
+                        "keywords": ["нишевый", "эксклюзивный", "сложный", "уникальный", "артистический"]
+                    }
+                ]
+            },
+
+            # БЛОК 2: ПСИХОЛОГИЧЕСКИЙ (3 вопроса)
+            {
+                "id": "personality_type",
+                "block": "psychological",
+                "question": "🧠 **Какой тип личности вам ближе?**",
+                "type": "single_choice",
+                "options": [
+                    {
+                        "text": "💕 Романтик",
+                        "value": "romantic",
+                        "keywords": ["романтичный", "чувственный", "нежный", "floral", "rose", "jasmine"]
+                    },
+                    {
+                        "text": "🎓 Интеллектуал",
+                        "value": "intellectual",
+                        "keywords": ["сложный", "утонченный", "изысканный", "green", "herbaceous"]
+                    },
+                    {
+                        "text": "🎉 Экстраверт",
+                        "value": "extrovert",
+                        "keywords": ["яркий", "заметный", "bold", "oriental", "spicy"]
+                    },
+                    {
+                        "text": "🤫 Интроверт",
+                        "value": "introvert",
+                        "keywords": ["спокойный", "деликатный", "subtle", "woody", "musky"]
+                    },
+                    {
+                        "text": "🔬 Логик-аналитик",
+                        "value": "analytical",
+                        "keywords": ["структурированный", "чистый", "minimalistic", "aquatic", "ozonic"]
+                    }
                 ]
             },
             {
-                "id": "budget",
-                "question": "💰 **Какой у вас бюджет на парфюм?**",
+                "id": "lifestyle",
+                "block": "psychological", 
+                "question": "🏃 **Опишите ваш образ жизни:**",
                 "type": "single_choice",
                 "options": [
-                    {"text": "💸 До 2000 рублей", "value": "до 2000"},
-                    {"text": "💵 2000-5000 рублей", "value": "2000-5000"},
-                    {"text": "💴 5000-10000 рублей", "value": "5000-10000"},
-                    {"text": "💎 Свыше 10000 рублей", "value": "свыше 10000"}
+                    {
+                        "text": "⚡ Активный и динамичный",
+                        "value": "active",
+                        "keywords": ["энергичный", "спортивный", "fresh", "citrus", "energizing"]
+                    },
+                    {
+                        "text": "🧘 Спокойный и размеренный",
+                        "value": "calm",
+                        "keywords": ["расслабляющий", "мягкий", "comforting", "vanilla", "amber"]
+                    },
+                    {
+                        "text": "🎨 Творческий и артистичный",
+                        "value": "creative",
+                        "keywords": ["креативный", "необычный", "artistic", "incense", "patchouli"]
+                    },
+                    {
+                        "text": "💼 Деловой и профессиональный",
+                        "value": "professional",
+                        "keywords": ["строгий", "элегантный", "sophisticated", "cedar", "sandalwood"]
+                    }
                 ]
             },
             {
-                "id": "occasion",
-                "question": "🎭 **Для каких случаев вы планируете использовать парфюм?**",
+                "id": "usage_time",
+                "block": "psychological",
+                "question": "⏰ **В какое время дня планируете использовать аромат?**",
                 "type": "multiple_choice",
                 "options": [
-                    {"text": "🏢 Работа/офис", "value": "работа"},
-                    {"text": "💕 Романтические встречи", "value": "свидания"},
-                    {"text": "🎉 Особые мероприятия", "value": "события"},
-                    {"text": "🌅 Повседневная жизнь", "value": "повседневно"},
-                    {"text": "🌙 Вечерние выходы", "value": "вечер"}
+                    {
+                        "text": "🌅 Утром и днем",
+                        "value": "day",
+                        "keywords": ["дневной", "light", "fresh", "citrus", "green"]
+                    },
+                    {
+                        "text": "🌃 Вечером",
+                        "value": "evening",
+                        "keywords": ["вечерний", "intense", "oriental", "woody", "amber"]
+                    },
+                    {
+                        "text": "✨ На особые случаи",
+                        "value": "special",
+                        "keywords": ["праздничный", "luxurious", "sophisticated", "oud", "rare"]
+                    },
+                    {
+                        "text": "🔄 Универсально",
+                        "value": "universal",
+                        "keywords": ["универсальный", "versatile", "balanced", "moderate"]
+                    }
+                ]
+            },
+
+            # БЛОК 3: LIFESTYLE (4 вопроса)
+            {
+                "id": "occasions",
+                "block": "lifestyle",
+                "question": "🎭 **Для каких случаев нужен аромат?**",
+                "type": "multiple_choice",
+                "options": [
+                    {
+                        "text": "🏢 Повседневная работа/учеба",
+                        "value": "work",
+                        "keywords": ["офисный", "деликатный", "professional", "clean", "subtle"]
+                    },
+                    {
+                        "text": "💕 Романтические встречи",
+                        "value": "romantic",
+                        "keywords": ["соблазнительный", "чувственный", "seductive", "rose", "ylang-ylang"]
+                    },
+                    {
+                        "text": "🎉 Вечеринки и мероприятия",
+                        "value": "party",
+                        "keywords": ["яркий", "запоминающийся", "party", "gourmand", "sweet"]
+                    },
+                    {
+                        "text": "🏃 Спорт и активность",
+                        "value": "sport",
+                        "keywords": ["свежий", "легкий", "sport", "aquatic", "marine"]
+                    },
+                    {
+                        "text": "🛋️ Отдых и релакс",
+                        "value": "relaxation",
+                        "keywords": ["успокаивающий", "комфортный", "relaxing", "lavender", "chamomile"]
+                    }
+                ]
+            },
+            {
+                "id": "style_preference",
+                "block": "lifestyle",
+                "question": "👔 **Ваш стиль в одежде:**",
+                "type": "single_choice",
+                "options": [
+                    {
+                        "text": "👑 Классический и элегантный",
+                        "value": "classic",
+                        "keywords": ["классический", "элегантный", "timeless", "chypre", "aldehydic"]
+                    },
+                    {
+                        "text": "🔥 Модный и трендовый",
+                        "value": "trendy",
+                        "keywords": ["модный", "современный", "trendy", "fruity", "synthetic"]
+                    },
+                    {
+                        "text": "👕 Casual и комфортный",
+                        "value": "casual",
+                        "keywords": ["простой", "комфортный", "easy-going", "cotton", "clean"]
+                    },
+                    {
+                        "text": "⚡ Экстравагантный и яркий",
+                        "value": "bold",
+                        "keywords": ["яркий", "смелый", "extravagant", "leather", "tobacco"]
+                    }
+                ]
+            },
+            {
+                "id": "budget_category",
+                "block": "lifestyle",
+                "question": "💰 **Предпочтительная ценовая категория:**",
+                "type": "single_choice",
+                "options": [
+                    {
+                        "text": "💸 Доступная (масс-маркет)",
+                        "value": "mass_market",
+                        "keywords": ["популярный", "доступный", "commercial", "mainstream"]
+                    },
+                    {
+                        "text": "💎 Средняя (селективная)",
+                        "value": "selective",
+                        "keywords": ["качественный", "селективный", "premium", "boutique"]
+                    },
+                    {
+                        "text": "👑 Высокая (люкс/нишевая)",
+                        "value": "luxury",
+                        "keywords": ["люксовый", "нишевый", "luxury", "exclusive", "artisanal"]
+                    }
+                ]
+            },
+            {
+                "id": "longevity_preference",
+                "block": "lifestyle",
+                "question": "⏱️ **Предпочтительная стойкость аромата:**",
+                "type": "single_choice",
+                "options": [
+                    {
+                        "text": "🌸 Легкий и ненавязчивый (2-4 часа)",
+                        "value": "light",
+                        "keywords": ["легкий", "деликатный", "eau_de_cologne", "citrus", "aromatic"]
+                    },
+                    {
+                        "text": "⚖️ Умеренной стойкости (4-6 часов)",
+                        "value": "moderate",
+                        "keywords": ["умеренный", "сбалансированный", "eau_de_toilette", "balanced"]
+                    },
+                    {
+                        "text": "💪 Стойкий и насыщенный (8+ часов)",
+                        "value": "long_lasting",
+                        "keywords": ["стойкий", "насыщенный", "eau_de_parfum", "intense", "heavy"]
+                    }
+                ]
+            },
+
+            # БЛОК 4: СЕНСОРНЫЙ (3 вопроса) - Edwards Fragrance Wheel
+            {
+                "id": "fragrance_families",
+                "block": "sensory",
+                "question": "🌸 **Какие ароматические семейства вам нравятся? (Edwards Wheel)**",
+                "type": "multiple_choice",
+                "options": [
+                    {
+                        "text": "🌸 Цветочные (роза, жасмин, пион)",
+                        "value": "floral",
+                        "keywords": ["floral", "rose", "jasmine", "peony", "lily", "romantic"]
+                    },
+                    {
+                        "text": "🌟 Восточные/Амбровые (ваниль, амбра, мускус)",
+                        "value": "oriental",
+                        "keywords": ["oriental", "amber", "vanilla", "musk", "resin", "warm"]
+                    },
+                    {
+                        "text": "🌳 Древесные (сандал, кедр, дуб)",
+                        "value": "woody",
+                        "keywords": ["woody", "sandalwood", "cedar", "oak", "pine", "forest"]
+                    },
+                    {
+                        "text": "💧 Свежие (цитрус, зеленые, водные)",
+                        "value": "fresh",
+                        "keywords": ["fresh", "citrus", "green", "aquatic", "marine", "clean"]
+                    }
                 ]
             },
             {
                 "id": "intensity_preference",
-                "question": "💨 **Какую интенсивность аромата вы предпочитаете?**",
+                "block": "sensory",
+                "question": "📶 **Предпочтительная интенсивность аромата:**",
                 "type": "single_choice",
                 "options": [
-                    {"text": "🌸 Легкий и ненавязчивый", "value": "легкий"},
-                    {"text": "🌺 Умеренный", "value": "умеренный"},
-                    {"text": "🌹 Насыщенный и стойкий", "value": "насыщенный"}
+                    {
+                        "text": "🌸 Деликатная и тонкая",
+                        "value": "delicate",
+                        "keywords": ["деликатный", "тонкий", "subtle", "soft", "gentle"]
+                    },
+                    {
+                        "text": "⚖️ Умеренная и сбалансированная",
+                        "value": "moderate",
+                        "keywords": ["умеренный", "сбалансированный", "moderate", "balanced"]
+                    },
+                    {
+                        "text": "🔥 Яркая и насыщенная",
+                        "value": "intense",
+                        "keywords": ["яркий", "насыщенный", "intense", "bold", "powerful"]
+                    }
                 ]
             },
             {
-                "id": "season_preference",
-                "question": "🌍 **В какое время года вы чаще всего используете парфюм?**",
+                "id": "seasonal_preference",
+                "block": "sensory",
+                "question": "🌍 **В какие сезоны планируете носить аромат?**",
                 "type": "multiple_choice",
                 "options": [
-                    {"text": "🌸 Весна", "value": "весна"},
-                    {"text": "☀️ Лето", "value": "лето"},
-                    {"text": "🍂 Осень", "value": "осень"},
-                    {"text": "❄️ Зима", "value": "зима"}
+                    {
+                        "text": "🌸 Весна",
+                        "value": "spring",
+                        "keywords": ["весенний", "свежий", "green", "floral", "light"]
+                    },
+                    {
+                        "text": "☀️ Лето",
+                        "value": "summer",
+                        "keywords": ["летний", "легкий", "citrus", "aquatic", "fresh"]
+                    },
+                    {
+                        "text": "🍂 Осень",
+                        "value": "autumn",
+                        "keywords": ["осенний", "теплый", "spicy", "woody", "amber"]
+                    },
+                    {
+                        "text": "❄️ Зима",
+                        "value": "winter",
+                        "keywords": ["зимний", "согревающий", "oriental", "heavy", "intense"]
+                    }
                 ]
             },
+
+            # БЛОК 5: ЭМОЦИОНАЛЬНО-АССОЦИАТИВНЫЙ (3 вопроса)
             {
-                "id": "fragrance_families",
-                "question": "🌿 **Какие группы ароматов вам нравятся?**",
+                "id": "desired_mood",
+                "block": "emotional",
+                "question": "😊 **Какие настроения и эмоции хотите передать?**",
                 "type": "multiple_choice",
                 "options": [
-                    {"text": "🌸 Цветочные", "value": "цветочные"},
-                    {"text": "🍊 Цитрусовые", "value": "цитрусовые"},
-                    {"text": "🌲 Древесные", "value": "древесные"},
-                    {"text": "🌿 Свежие", "value": "свежие"},
-                    {"text": "🍯 Восточные", "value": "восточные"},
-                    {"text": "🌰 Гурманские", "value": "гурманские"}
+                    {
+                        "text": "💪 Уверенность и силу",
+                        "value": "confidence",
+                        "keywords": ["уверенный", "сильный", "powerful", "dominant", "leader"]
+                    },
+                    {
+                        "text": "💕 Романтику и нежность",
+                        "value": "romance",
+                        "keywords": ["романтичный", "нежный", "romantic", "tender", "loving"]
+                    },
+                    {
+                        "text": "👑 Элегантность и изысканность",
+                        "value": "elegance",
+                        "keywords": ["элегантный", "изысканный", "sophisticated", "refined", "classy"]
+                    },
+                    {
+                        "text": "⚡ Энергию и жизнерадостность",
+                        "value": "energy",
+                        "keywords": ["энергичный", "жизнерадостный", "energetic", "vibrant", "happy"]
+                    },
+                    {
+                        "text": "🧘 Спокойствие и гармонию",
+                        "value": "calm",
+                        "keywords": ["спокойный", "гармоничный", "peaceful", "serene", "balanced"]
+                    }
                 ]
             },
             {
-                "id": "experience_level",
-                "question": "🎓 **Ваш опыт с парфюмерией:**",
-                "type": "single_choice",
+                "id": "scent_memories",
+                "block": "emotional",
+                "question": "🌺 **Какие ароматические воспоминания вам приятны?**",
+                "type": "multiple_choice",
                 "options": [
-                    {"text": "🌱 Новичок", "value": "новичок"},
-                    {"text": "🌿 Немного разбираюсь", "value": "средний"},
-                    {"text": "🌳 Хорошо разбираюсь", "value": "продвинутый"},
-                    {"text": "🎯 Эксперт", "value": "эксперт"}
+                    {
+                        "text": "🌷 Цветущий сад весной",
+                        "value": "garden",
+                        "keywords": ["цветочный", "природный", "garden", "blooming", "natural"]
+                    },
+                    {
+                        "text": "🏠 Уютный дом с выпечкой",
+                        "value": "home_comfort",
+                        "keywords": ["уютный", "сладкий", "gourmand", "vanilla", "caramel"]
+                    },
+                    {
+                        "text": "🌲 Прогулка по лесу",
+                        "value": "forest",
+                        "keywords": ["лесной", "древесный", "forest", "pine", "earthy"]
+                    },
+                    {
+                        "text": "🌊 Морской берег",
+                        "value": "ocean",
+                        "keywords": ["морской", "свежий", "marine", "salty", "breeze"]
+                    },
+                    {
+                        "text": "🕌 Восточный базар",
+                        "value": "oriental_market",
+                        "keywords": ["восточный", "пряный", "spicy", "exotic", "incense"]
+                    }
+                ]
+            },
+            {
+                "id": "color_associations",
+                "block": "emotional",
+                "question": "🎨 **Какие цвета ассоциируются с вашим идеальным ароматом?**",
+                "type": "multiple_choice",
+                "options": [
+                    {
+                        "text": "⚪ Белый и светлые оттенки",
+                        "value": "white_light",
+                        "keywords": ["чистый", "невинный", "clean", "pure", "innocent"]
+                    },
+                    {
+                        "text": "🌸 Розовый и персиковый",
+                        "value": "pink_peach",
+                        "keywords": ["нежный", "женственный", "gentle", "feminine", "soft"]
+                    },
+                    {
+                        "text": "🟡 Золотой и янтарный",
+                        "value": "gold_amber",
+                        "keywords": ["теплый", "роскошный", "warm", "luxurious", "rich"]
+                    },
+                    {
+                        "text": "🟢 Зеленый и природные тона",
+                        "value": "green_natural",
+                        "keywords": ["природный", "свежий", "natural", "green", "herbal"]
+                    },
+                    {
+                        "text": "🔵 Синий и морские оттенки",
+                        "value": "blue_marine",
+                        "keywords": ["прохладный", "свежий", "cool", "aquatic", "marine"]
+                    },
+                    {
+                        "text": "⚫ Темные и глубокие цвета",
+                        "value": "dark_deep",
+                        "keywords": ["глубокий", "таинственный", "deep", "mysterious", "intense"]
+                    }
                 ]
             }
         ]
-    
+
     async def start_quiz(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """Начинает квиз"""
+        """Начинает квиз для пользователя"""
         user_id = update.effective_user.id
         
-        # Сбрасываем предыдущие данные квиза
-        self.db.update_session_state(user_id, "QUIZ_IN_PROGRESS", {"quiz_answers": {}, "quiz_step": 0})
+        # Сбрасываем прогресс квиза
+        context.user_data['quiz_step'] = 0
+        context.user_data['quiz_answers'] = {}
         
-        # Показываем первый вопрос
-        await self._show_quiz_question(update, context, 0)
+        await self._send_question(update, context, 0)
         
-        logger.info(f"📝 Пользователь {user_id} начал квиз")
-    
+        logger.info(f"🎯 Пользователь {user_id} начал новый квиз (v3.0 Edwards Wheel)")
+
     async def handle_quiz_callback(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """Обрабатывает нажатия кнопок в квизе"""
+        """Обработчик callback'ов квиза"""
         query = update.callback_query
         user_id = update.effective_user.id
         
-        # Получаем текущую сессию
-        session = self.db.get_user_session(user_id)
-        if not session or session.get('current_state') != 'QUIZ_IN_PROGRESS':
-            await query.edit_message_text("❌ Сессия квиза истекла. Начните заново.")
-            return
+        # Получаем текущие данные
+        current_step = context.user_data.get('quiz_step', 0)
+        current_answers = context.user_data.get('quiz_answers', {})
         
-        quiz_answers = session.get('quiz_answers', {})
-        quiz_step = session.get('quiz_step', 0)
-        
-        # Парсим callback_data
-        callback_parts = query.data.split('_')
-        action = callback_parts[1]  # quiz_answer, quiz_next, quiz_finish
-        
-        if action == "answer":
-            # Сохраняем ответ
-            question_id = callback_parts[2]
-            answer_value = "_".join(callback_parts[3:])
-            
-            current_question = self.quiz_questions[quiz_step]
-            
-            if current_question['type'] == 'single_choice':
-                quiz_answers[question_id] = answer_value
-            elif current_question['type'] == 'multiple_choice':
-                if question_id not in quiz_answers:
-                    quiz_answers[question_id] = []
-                
-                if answer_value in quiz_answers[question_id]:
-                    quiz_answers[question_id].remove(answer_value)
+        try:
+            if query.data == "quiz_next":
+                # Переход к следующему вопросу
+                next_step = current_step + 1
+                if next_step < len(self.quiz_questions):
+                    context.user_data['quiz_step'] = next_step
+                    await self._send_question(update, context, next_step)
                 else:
-                    quiz_answers[question_id].append(answer_value)
-            
-            # Обновляем сессию
-            self.db.update_quiz_session(user_id, quiz_answers, quiz_step)
-            
-            # Обновляем отображение вопроса
-            await self._show_quiz_question(update, context, quiz_step, quiz_answers)
-            
-        elif action == "next":
-            # Переходим к следующему вопросу
-            quiz_step += 1
-            
-            if quiz_step < len(self.quiz_questions):
-                self.db.update_quiz_session(user_id, quiz_answers, quiz_step)
-                await self._show_quiz_question(update, context, quiz_step, quiz_answers)
-            else:
-                # Квиз завершен
-                await self._finish_quiz(update, context, quiz_answers)
+                    await self._finish_quiz(update, context, current_answers)
+                    
+            elif query.data == "quiz_finish":
+                # Завершение квиза
+                await self._finish_quiz(update, context, current_answers)
                 
-        elif action == "finish":
-            # Завершаем квиз
-            await self._finish_quiz(update, context, quiz_answers)
-    
-    async def handle_quiz_answer(self, update: Update, context: ContextTypes.DEFAULT_TYPE, message_text: str):
-        """Обрабатывает текстовые ответы в квизе (если потребуется)"""
-        # В текущей реализации все ответы через кнопки, но можно расширить
-        await update.message.reply_text(
-            "📝 Пожалуйста, используйте кнопки для ответов на вопросы квиза.",
-            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Главное меню", callback_data="back_to_menu")]])
-        )
-    
-    async def _show_quiz_question(self, update: Update, context: ContextTypes.DEFAULT_TYPE, 
-                                 step: int, current_answers: Dict = None):
-        """Показывает вопрос квиза"""
+            elif query.data == "quiz_prev":
+                # Переход к предыдущему вопросу
+                prev_step = current_step - 1
+                if prev_step >= 0:
+                    context.user_data['quiz_step'] = prev_step
+                    await self._send_question(update, context, prev_step)
+                
+            elif query.data.startswith("quiz_answer_"):
+                # Обработка ответа на вопрос
+                parts = query.data.split("_", 3)
+                if len(parts) >= 4:
+                    question_id = parts[2]
+                    answer_value = parts[3]
+                    
+                    question = self.quiz_questions[current_step]
+                    
+                    if question['type'] == 'single_choice':
+                        current_answers[question_id] = answer_value
+                    elif question['type'] == 'multiple_choice':
+                        if question_id not in current_answers:
+                            current_answers[question_id] = []
+                        
+                        if answer_value in current_answers[question_id]:
+                            current_answers[question_id].remove(answer_value)
+                        else:
+                            current_answers[question_id].append(answer_value)
+                    
+                    context.user_data['quiz_answers'] = current_answers
+                    
+                    # Обновляем отображение текущего вопроса
+                    await self._send_question(update, context, current_step)
+                    
+        except Exception as e:
+            logger.error(f"Ошибка в обработчике квиза: {e}")
+            await query.answer("❌ Произошла ошибка. Попробуйте еще раз.")
+
+    async def _send_question(self, update: Update, context: ContextTypes.DEFAULT_TYPE, step: int):
+        """Отправляет вопрос пользователю"""
         if step >= len(self.quiz_questions):
             return
-        
+            
         question = self.quiz_questions[step]
-        current_answers = current_answers or {}
+        current_answers = context.user_data.get('quiz_answers', {})
         
         # Формируем клавиатуру
         keyboard = []
@@ -227,6 +566,9 @@ class QuizSystem:
                 control_buttons.append(InlineKeyboardButton("🏁 Завершить квиз", callback_data="quiz_finish"))
         
         # Кнопка "Назад"
+        if step > 0:
+            control_buttons.append(InlineKeyboardButton("⬅️ Назад", callback_data="quiz_prev"))
+        
         control_buttons.append(InlineKeyboardButton("🔙 Главное меню", callback_data="back_to_menu"))
         
         if control_buttons:
@@ -234,39 +576,36 @@ class QuizSystem:
         
         reply_markup = InlineKeyboardMarkup(keyboard)
         
+        # Определяем блок вопроса
+        block_labels = {
+            'demographic': '1️⃣ Демографический блок',
+            'psychological': '2️⃣ Психологический блок', 
+            'lifestyle': '3️⃣ Lifestyle блок',
+            'sensory': '4️⃣ Сенсорный блок (Edwards Wheel)',
+            'emotional': '5️⃣ Эмоционально-ассоциативный блок'
+        }
+        
         # Формируем текст вопроса
         progress = f"Вопрос {step + 1} из {len(self.quiz_questions)}"
+        block_info = block_labels.get(question['block'], '')
         
         if question['type'] == 'multiple_choice':
             instruction = "\n💡 *Можно выбрать несколько вариантов*"
         else:
             instruction = "\n💡 *Выберите один вариант*"
         
-        question_text = f"📋 **{progress}**\n\n{question['question']}{instruction}"
+        question_text = f"🔬 **{progress}**\n{block_info}\n\n{question['question']}{instruction}"
         
         # Отправляем или редактируем сообщение
         if update.callback_query:
             try:
-                # Получаем текущий текст сообщения для сравнения
-                current_text = update.callback_query.message.text if update.callback_query.message else ""
-                current_markup = update.callback_query.message.reply_markup if update.callback_query.message else None
-                
-                # Проверяем, отличается ли новый контент от текущего
-                markup_changed = str(current_markup) != str(reply_markup) if current_markup else True
-                text_changed = current_text != question_text
-                
-                if text_changed or markup_changed:
-                    await update.callback_query.edit_message_text(
-                        text=question_text,
-                        reply_markup=reply_markup,
-                        parse_mode='Markdown'
-                    )
-                else:
-                    # Если контент не изменился, просто отвечаем на callback
-                    await update.callback_query.answer()
+                await update.callback_query.edit_message_text(
+                    text=question_text,
+                    reply_markup=reply_markup,
+                    parse_mode='Markdown'
+                )
             except Exception as e:
                 logger.error(f"Ошибка при редактировании сообщения квиза: {e}")
-                # Если редактирование не удалось, отправляем новое сообщение
                 try:
                     await update.effective_chat.send_message(
                         text=question_text,
@@ -281,114 +620,186 @@ class QuizSystem:
                 reply_markup=reply_markup,
                 parse_mode='Markdown'
             )
-    
+
     async def _finish_quiz(self, update: Update, context: ContextTypes.DEFAULT_TYPE, quiz_answers: Dict):
         """Завершает квиз и показывает результаты"""
         user_id = update.effective_user.id
         
-        # Анализируем ответы и создаем профиль
-        user_profile = self._analyze_quiz_answers(quiz_answers)
+        # Анализируем ответы с помощью Edwards Fragrance Wheel
+        analysis_result = self._analyze_quiz_answers_edwards(quiz_answers)
         
         # Сохраняем профиль пользователя
-        self.db.save_user_quiz_profile(user_id, user_profile)
+        self.db.save_user_quiz_profile(user_id, analysis_result['profile'])
         
-        # Получаем все подходящие парфюмы из БД (без лимитов!)
+        # Получаем все подходящие парфюмы из БД
         suitable_perfumes = self.db.get_all_perfumes_from_database()
         
-        # Здесь можно добавить фильтрацию по профилю пользователя
-        # Но согласно техническому заданию, используем ВСЕ данные
+        # Формируем запрос к AI с анализом Edwards Wheel
+        ai_prompt = self._create_ai_prompt_with_edwards(analysis_result, suitable_perfumes)
         
+        # Отправляем запрос к AI
         try:
-            # Используем AI для создания рекомендаций
-            from ai.processor import AIProcessor
-            from config import Config
+            ai_response = await self.ai_processor.process_message(ai_prompt, user_id)
             
-            config = Config()
-            ai_processor = AIProcessor(config.openrouter_api_key)
-            
-            # Создаем промпт для рекомендаций
-            prompt = ai_processor.create_quiz_results_prompt(user_profile, suitable_perfumes)
-            
-            # Отправляем уведомление о обработке
-            processing_msg = await update.callback_query.edit_message_text(
-                "🤔 Анализирую ваши ответы и подбираю персональные рекомендации..."
-            )
-            
-            # Получаем рекомендации от ИИ
-            ai_response = await ai_processor.call_openrouter_api(prompt, max_tokens=4000)
-            
-            # Обрабатываем ответ и добавляем ссылки
-            processed_response = ai_processor.process_ai_response_with_links(ai_response, self.db)
-            
-            # Формируем финальный ответ
-            final_response = f"""🎉 **Квиз завершен!**
+            # Формируем итоговое сообщение
+            result_text = f"""
+🎯 **Квиз завершен!**
 
-{processed_response}
+🔬 **Анализ по Edwards Fragrance Wheel:**
+🌸 Цветочные: {analysis_result['edwards_analysis']['floral']}%
+🌟 Восточные: {analysis_result['edwards_analysis']['oriental']}%
+🌳 Древесные: {analysis_result['edwards_analysis']['woody']}%
+💧 Свежие: {analysis_result['edwards_analysis']['fresh']}%
 
-📝 Ваш профиль сохранен. В будущем я смогу давать еще более точные рекомендации!"""
-            
-            # Удаляем сообщение о обработке и отправляем результат
-            await processing_msg.delete()
-            
-            await update.effective_chat.send_message(
-                text=final_response,
-                parse_mode='Markdown',
-                disable_web_page_preview=True,
-                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Главное меню", callback_data="back_to_menu")]])
-            )
-            
-            # Сохраняем статистику
-            self.db.save_usage_stat(user_id, "quiz_completed", None, str(quiz_answers), len(final_response))
-            
-            # Закрываем AI processor
-            await ai_processor.close()
+**Доминирующее семейство:** {analysis_result['dominant_family']}
+
+🤖 **Персональные рекомендации:**
+{ai_response}
+            """
             
         except Exception as e:
-            logger.error(f"Ошибка при завершении квиза: {e}")
-            await update.callback_query.edit_message_text(
-                "❌ Произошла ошибка при обработке результатов квиза. Попробуйте позже.",
-                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Главное меню", callback_data="back_to_menu")]])
+            logger.error(f"Ошибка при обработке AI запроса: {e}")
+            result_text = f"""
+🎯 **Квиз завершен!**
+
+🔬 **Анализ по Edwards Fragrance Wheel:**
+🌸 Цветочные: {analysis_result['edwards_analysis']['floral']}%
+🌟 Восточные: {analysis_result['edwards_analysis']['oriental']}%
+🌳 Древесные: {analysis_result['edwards_analysis']['woody']}%
+💧 Свежие: {analysis_result['edwards_analysis']['fresh']}%
+
+**Доминирующее семейство:** {analysis_result['dominant_family']}
+
+⚠️ AI-анализ временно недоступен, но ваш профиль сохранен!
+            """
+        
+        keyboard = [
+            [InlineKeyboardButton("🔄 Пройти заново", callback_data="start_quiz")],
+            [InlineKeyboardButton("🔙 Главное меню", callback_data="back_to_menu")]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        # Отправляем результат
+        if update.callback_query:
+            try:
+                await update.callback_query.edit_message_text(
+                    text=result_text,
+                    reply_markup=reply_markup,
+                    parse_mode='Markdown'
+                )
+            except Exception:
+                await update.effective_chat.send_message(
+                    text=result_text,
+                    reply_markup=reply_markup,
+                    parse_mode='Markdown'
+                )
+        else:
+            await update.message.reply_text(
+                text=result_text,
+                reply_markup=reply_markup,
+                parse_mode='Markdown'
             )
         
-        # Возвращаем пользователя в главное меню
-        self.db.update_session_state(user_id, "MAIN_MENU")
+        logger.info(f"✅ Пользователь {user_id} завершил квиз. Доминирующее семейство: {analysis_result['dominant_family']}")
+
+    def _analyze_quiz_answers_edwards(self, quiz_answers: Dict) -> Dict:
+        """Анализирует ответы квиза с помощью Edwards Fragrance Wheel"""
         
-        logger.info(f"✅ Пользователь {user_id} завершил квиз")
-    
-    def _analyze_quiz_answers(self, quiz_answers: Dict) -> Dict[str, Any]:
-        """Анализирует ответы квиза и создает профиль пользователя"""
+        # Собираем все ключевые слова из ответов
+        all_keywords = []
         profile = {}
         
-        # Прямое сопоставление ответов
-        direct_mapping = {
-            'gender': 'gender',
-            'age_group': 'age_group',
-            'budget': 'budget',
-            'intensity_preference': 'intensity_preference',
-            'experience_level': 'experience_level'
+        for question in self.quiz_questions:
+            question_id = question['id']
+            if question_id in quiz_answers:
+                answer_values = quiz_answers[question_id]
+                if not isinstance(answer_values, list):
+                    answer_values = [answer_values]
+                
+                profile[question_id] = answer_values
+                
+                # Собираем ключевые слова
+                for answer_value in answer_values:
+                    for option in question['options']:
+                        if option['value'] == answer_value:
+                            all_keywords.extend(option.get('keywords', []))
+        
+        # Анализ по Edwards Fragrance Wheel
+        edwards_keywords = {
+            'floral': ['floral', 'rose', 'jasmine', 'peony', 'lily', 'romantic', 'feminine', 'gentle', 'нежный', 'романтичный', 'чувственный', 'женственный'],
+            'oriental': ['oriental', 'amber', 'vanilla', 'musk', 'warm', 'spicy', 'exotic', 'intense', 'теплый', 'пряный', 'восточный', 'насыщенный', 'согревающий'],
+            'woody': ['woody', 'sandalwood', 'cedar', 'forest', 'pine', 'earthy', 'masculine', 'древесный', 'лесной', 'мужской', 'строгий'],
+            'fresh': ['fresh', 'citrus', 'green', 'aquatic', 'marine', 'clean', 'light', 'свежий', 'легкий', 'морской', 'чистый', 'прохладный', 'дневной', 'летний', 'весенний']
         }
         
-        for quiz_key, profile_key in direct_mapping.items():
-            if quiz_key in quiz_answers:
-                profile[profile_key] = quiz_answers[quiz_key]
+        edwards_scores = {family: 0 for family in edwards_keywords.keys()}
         
-        # Массивы
-        array_mapping = {
-            'occasion': 'occasion',
-            'season_preference': 'season_preference',
-            'fragrance_families': 'preferred_fragrance_groups'
+        # Подсчитываем соответствия
+        for keyword in all_keywords:
+            keyword_lower = keyword.lower()
+            for family, family_keywords in edwards_keywords.items():
+                if keyword_lower in family_keywords:
+                    edwards_scores[family] += 1
+        
+        # Вычисляем проценты
+        total_score = sum(edwards_scores.values())
+        if total_score > 0:
+            edwards_percentages = {
+                family: round((score / total_score) * 100)
+                for family, score in edwards_scores.items()
+            }
+        else:
+            edwards_percentages = {family: 0 for family in edwards_keywords.keys()}
+        
+        # Определяем доминирующее семейство
+        dominant_family = max(edwards_percentages.keys(), key=lambda k: edwards_percentages[k])
+        if edwards_percentages[dominant_family] == 0:
+            dominant_family = 'fresh'  # По умолчанию
+        
+        return {
+            'profile': profile,
+            'all_keywords': all_keywords,
+            'edwards_analysis': edwards_percentages,
+            'dominant_family': dominant_family,
+            'total_keywords': len(all_keywords),
+            'unique_keywords': len(set(all_keywords))
+        }
+
+    def _create_ai_prompt_with_edwards(self, analysis_result: Dict, perfumes_data: List) -> str:
+        """Создает промпт для AI с анализом Edwards Wheel"""
+        
+        family_names = {
+            'floral': 'Цветочные',
+            'oriental': 'Восточные/Амбровые',
+            'woody': 'Древесные',
+            'fresh': 'Свежие'
         }
         
-        for quiz_key, profile_key in array_mapping.items():
-            if quiz_key in quiz_answers:
-                profile[profile_key] = quiz_answers[quiz_key]
+        prompt = f"""
+Ты эксперт-парфюмер. Проанализируй результаты научного квиза на основе Edwards Fragrance Wheel и подбери идеальные парфюмы.
+
+АНАЛИЗ ПОЛЬЗОВАТЕЛЯ:
+🔬 Edwards Fragrance Wheel анализ:
+- Цветочные: {analysis_result['edwards_analysis']['floral']}%
+- Восточные/Амбровые: {analysis_result['edwards_analysis']['oriental']}%  
+- Древесные: {analysis_result['edwards_analysis']['woody']}%
+- Свежие: {analysis_result['edwards_analysis']['fresh']}%
+
+Доминирующее семейство: {family_names.get(analysis_result['dominant_family'], analysis_result['dominant_family'])}
+
+Ключевые характеристики: {', '.join(analysis_result['all_keywords'][:15])}
+
+ЗАДАЧА:
+1. Подбери 3-5 конкретных парфюмов из предоставленного каталога
+2. Учитывай доминирующее семейство Edwards Wheel
+3. Объясни почему именно эти ароматы подходят
+4. Укажи для каких случаев каждый аромат подходит
+5. Дай краткое описание каждого аромата
+
+КАТАЛОГ ПАРФЮМОВ:
+{json.dumps(perfumes_data[:100], ensure_ascii=False, indent=2)}
+
+Отвечай структурированно и профессионально, как консультант в парфюмерном магазине.
+        """
         
-        # Добавляем метаданные
-        profile['quiz_completed_at'] = datetime.now().isoformat()
-        profile['quiz_version'] = '1.0'
-        
-        return profile
-    
-    def _analyze_quiz_results(self, quiz_answers: Dict) -> Dict[str, Any]:
-        """Анализирует результаты квиза и создает профиль пользователя (совместимость)"""
-        return self._analyze_quiz_answers(quiz_answers)
+        return prompt
