@@ -90,17 +90,50 @@ class CompleteParfumeParser:
             # Получаем сырой контент
             content = response.content
             
-            # Декодируем с учетом кодировки
-            if response.encoding:
-                text = content.decode(response.encoding)
-            else:
-                text = content.decode('utf-8', errors='ignore')
+            # Безопасно декодируем с учетом кодировки
+            text = self._safe_decode_content(content, response)
             
             return BeautifulSoup(text, 'html.parser')
             
         except Exception as e:
             logger.error(f"Ошибка при загрузке {url}: {e}")
             return None
+    
+    def _safe_decode_content(self, content: bytes, response) -> str:
+        """Безопасно декодирует контент с обработкой различных кодировок"""
+        try:
+            # Сначала пробуем кодировку из заголовков
+            if response.encoding:
+                try:
+                    return content.decode(response.encoding)
+                except (UnicodeDecodeError, LookupError):
+                    logger.warning(f"Не удалось декодировать с кодировкой {response.encoding}")
+            
+            # Пробуем UTF-8
+            try:
+                return content.decode('utf-8')
+            except UnicodeDecodeError:
+                logger.warning("Не удалось декодировать как UTF-8")
+            
+            # Пробуем CP1251 (часто используется для русского контента)
+            try:
+                return content.decode('cp1251')
+            except UnicodeDecodeError:
+                logger.warning("Не удалось декодировать как CP1251")
+            
+            # Пробуем ISO-8859-1 (Latin-1)
+            try:
+                return content.decode('iso-8859-1')
+            except UnicodeDecodeError:
+                logger.warning("Не удалось декодировать как ISO-8859-1")
+            
+            # В крайнем случае используем UTF-8 с игнорированием ошибок
+            return content.decode('utf-8', errors='ignore')
+            
+        except Exception as e:
+            logger.error(f"Критическая ошибка при декодировании контента: {e}")
+            # Возвращаем пустую строку в случае критической ошибки
+            return ""
 
     def extract_factory_info(self, title: str) -> Tuple[str, str, str]:
         """
