@@ -124,9 +124,9 @@ class AIProcessor:
                 url = db_manager.get_perfume_url_by_article(article)
                 
                 if url:
-                    # Заменяем артикул на кликабельную ссылку
+                    # Заменяем артикул на кликабельную ссылку "Приобрести"
                     article_mark = f"[Артикул: {article}]"
-                    link_mark = f"[🛒 Заказать {article}]({url})"
+                    link_mark = f"[Приобрести]({url})"
                     processed_response = processed_response.replace(article_mark, link_mark)
                     
                     logger.info(f"🔗 Добавлена ссылка для артикула: {article}")

@@ -10,17 +10,13 @@ class PromptTemplates:
     def create_perfume_question_prompt(user_question: str, perfumes_data: List[Dict[str, Any]]) -> str:
         """Создает промпт для вопроса о парфюмах со ВСЕМИ данными каталога"""
         
-        # Формируем список всех парфюмов без лимитов
+        # Формируем оптимизированный список парфюмов (только ключевые поля)
         perfumes_list = []
         for perfume in perfumes_data:
             perfume_line = (
                 f"{perfume['name']} | "
                 f"{perfume['factory']} | "
-                f"{perfume['article']} | "
-                f"{perfume['price_formatted']} | "
-                f"{perfume['brand']} | "
-                f"{perfume['gender']} | "
-                f"{perfume['fragrance_group']}"
+                f"{perfume['article']}"
             )
             perfumes_list.append(perfume_line)
         
@@ -30,7 +26,7 @@ class PromptTemplates:
 
 ВОПРОС: "{user_question}"
 
-ВСЕ ДОСТУПНЫЕ АРОМАТЫ (Название | Фабрика | Артикул | Цена | Бренд | Пол | Ароматическая группа):
+ВСЕ ДОСТУПНЫЕ АРОМАТЫ (Название | Фабрика | Артикул):
 {perfumes_text}
 
 ИНСТРУКЦИИ:
@@ -75,18 +71,13 @@ class PromptTemplates:
         # Анализируем профиль пользователя
         profile_summary = PromptTemplates._analyze_user_profile(user_profile)
         
-        # Формируем список всех подходящих парфюмов без лимитов
+        # Формируем оптимизированный список подходящих парфюмов (только ключевые поля)
         perfumes_list = []
         for perfume in suitable_perfumes:
             perfume_line = (
                 f"{perfume['name']} | "
                 f"{perfume['factory']} | "
-                f"{perfume['article']} | "
-                f"{perfume['price_formatted']} | "
-                f"{perfume['brand']} | "
-                f"{perfume['gender']} | "
-                f"{perfume['fragrance_group']} | "
-                f"{perfume['quality_level']}"
+                f"{perfume['article']}"
             )
             perfumes_list.append(perfume_line)
         
@@ -97,7 +88,7 @@ class PromptTemplates:
 ПРОФИЛЬ ПОЛЬЗОВАТЕЛЯ:
 {profile_summary}
 
-ВСЕ ПОДХОДЯЩИЕ АРОМАТЫ (Название | Фабрика | Артикул | Цена | Бренд | Пол | Ароматическая группа | Качество):
+ВСЕ ПОДХОДЯЩИЕ АРОМАТЫ (Название | Фабрика | Артикул):
 {perfumes_text}
 
 ИНСТРУКЦИИ:
