@@ -708,11 +708,6 @@ class PerfumeBot:
         """Обрабатывает вопросы о парфюмах"""
         user_id = update.effective_user.id
         
-        # Проверяем кулдаун
-        if self.ai.is_api_cooldown_active(user_id):
-            await update.message.reply_text("⏱️ Пожалуйста, подождите 30 секунд перед следующим вопросом")
-            return
-        
         # Отправляем уведомление о обработке
         processing_msg = await update.message.reply_text("🤔 Анализирую ваш запрос и подбираю лучшие варианты...")
         
@@ -724,7 +719,13 @@ class PerfumeBot:
             prompt = self.ai.create_perfume_question_prompt(message_text, perfumes_data)
             
             # Получаем ответ от ИИ
-            ai_response = await self.ai.call_openrouter_api(prompt, max_tokens=4000)
+            ai_response = await self.ai.process_message(prompt, user_id)
+            
+            # Проверяем, не вернулся ли ответ о кулдауне
+            if "Пожалуйста, подождите" in ai_response:
+                await processing_msg.delete()
+                await update.message.reply_text(ai_response)
+                return
             
             # Обрабатываем ответ и добавляем ссылки
             processed_response = self.ai.process_ai_response_with_links(ai_response, self.db)
@@ -743,9 +744,6 @@ class PerfumeBot:
             # Сохраняем статистику
             self.db.save_usage_stat(user_id, "perfume_question", None, message_text, len(processed_response))
             
-            # Устанавливаем кулдаун
-            self.ai.set_api_cooldown(user_id, 30)
-            
             # Возвращаем в главное меню
             self.db.update_session_state(user_id, "MAIN_MENU")
             
@@ -760,11 +758,6 @@ class PerfumeBot:
     async def handle_fragrance_info(self, update: Update, context: ContextTypes.DEFAULT_TYPE, message_text: str):
         """Обрабатывает запросы информации об аромате"""
         user_id = update.effective_user.id
-        
-        # Проверяем кулдаун
-        if self.ai.is_api_cooldown_active(user_id):
-            await update.message.reply_text("⏱️ Пожалуйста, подождите 30 секунд перед следующим запросом")
-            return
         
         # Отправляем уведомление о поиске
         searching_msg = await update.message.reply_text("🔍 Ищу информацию об аромате...")
@@ -792,7 +785,13 @@ class PerfumeBot:
 Отвечай на русском языке, структурированно и информативно."""
 
             # Получаем ответ от ИИ
-            ai_response = await self.ai.call_openrouter_api(prompt, max_tokens=3000)
+            ai_response = await self.ai.process_message(prompt, user_id)
+            
+            # Проверяем, не вернулся ли ответ о кулдауне
+            if "Пожалуйста, подождите" in ai_response:
+                await searching_msg.delete()
+                await update.message.reply_text(ai_response)
+                return
             
             # Удаляем сообщение о поиске
             await searching_msg.delete()
@@ -807,9 +806,6 @@ class PerfumeBot:
             
             # Сохраняем статистику
             self.db.save_usage_stat(user_id, "fragrance_info", None, message_text, len(ai_response))
-            
-            # Устанавливаем кулдаун
-            self.ai.set_api_cooldown(user_id, 30)
             
             # Возвращаем в главное меню
             self.db.update_session_state(user_id, "MAIN_MENU")
