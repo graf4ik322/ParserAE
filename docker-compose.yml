@@ -17,8 +17,8 @@ services:
       - PARSE_INTERVAL_HOURS=6
       - PARSER_MAX_WORKERS=3
     volumes:
-      - ./data:/app/data
-      - ./logs:/app/logs
+      - ./data:/app/data:rw
+      - ./logs:/app/logs:rw
     ports:
       - "8080:8080"  # Для возможного веб-интерфейса в будущем
     healthcheck:

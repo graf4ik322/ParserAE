@@ -24,11 +24,14 @@ RUN mkdir -p /app/data /app/logs
 RUN chmod +x main.py
 
 # Создаем пользователя для запуска приложения (безопасность)
-RUN useradd -m -u 1001 botuser && chown -R botuser:botuser /app
+RUN useradd -m -u 1001 botuser
 
-# Устанавливаем правильные права на директории данных
+# Устанавливаем правильные права на директории данных ДО смены пользователя
 RUN chown -R botuser:botuser /app/data /app/logs
-RUN chmod 755 /app/data /app/logs
+RUN chmod 777 /app/data /app/logs
+
+# Передаем владение всем файлам приложения пользователю botuser
+RUN chown -R botuser:botuser /app
 
 USER botuser
 
