@@ -31,8 +31,20 @@ class DataProcessor:
             name = self._clean_text(raw_perfume.get('name', ''))
             full_title = self._clean_text(raw_perfume.get('full_title', ''))
             
-            # Извлекаем артикул из названия или URL
-            article = self._extract_article(full_title, raw_perfume.get('url', ''))
+            # Извлекаем детали из парфюма сначала
+            details = raw_perfume.get('details', {})
+            if isinstance(details, str):
+                details = {}
+            
+            # ПРИОРИТЕТ 1: Артикул из детальной страницы (КОД)
+            article = details.get('article', '').strip()
+            
+            # ПРИОРИТЕТ 2: Если артикул не найден в деталях, пытаемся извлечь из названия/URL
+            if not article:
+                article = self._extract_article(full_title, raw_perfume.get('url', ''))
+                logger.debug(f"Артикул извлечен из названия/URL: '{article}'")
+            else:
+                logger.debug(f"Артикул найден в деталях: '{article}'")
             
             # Обрабатываем фабрику
             factory = self._normalize_factory(raw_perfume.get('factory', ''))
@@ -44,11 +56,6 @@ class DataProcessor:
             
             # Создаем уникальный ключ для дедупликации
             unique_key = self._create_unique_key(brand, name, factory)
-            
-            # Извлекаем детали из парфюма
-            details = raw_perfume.get('details', {})
-            if isinstance(details, str):
-                details = {}
             
             gender = self._normalize_gender(details.get('gender', ''))
             fragrance_group = self._normalize_fragrance_group(details.get('fragrance_group', ''))
