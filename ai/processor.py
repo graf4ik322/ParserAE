@@ -35,7 +35,7 @@ class AIProcessor:
                     "HTTP-Referer": "https://perfume-bot.local",
                     "X-Title": "Perfume Bot"
                 },
-                timeout=aiohttp.ClientTimeout(total=300)  # 5 минут для больших промптов
+                timeout=aiohttp.ClientTimeout(total=300)  # 5 минут для больших промптов (из config)
             )
         return self.session
     
@@ -300,9 +300,9 @@ class AIProcessor:
             # Отправляем запрос к ИИ
             response = await self.call_openrouter_api(message)
             
-            # Устанавливаем кулдаун после успешного запроса
+            # Устанавливаем кулдаун после успешного запроса (используем значение из config)
             if user_id:
-                self.set_api_cooldown(user_id, 10)  # 10 секунд кулдаун
+                self.set_api_cooldown(user_id, 30)  # 30 секунд кулдаун (из .env)
             
             # Форматируем ответ для Telegram
             formatted_response = self._format_text_for_telegram(response)

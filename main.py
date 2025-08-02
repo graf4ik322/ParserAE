@@ -632,20 +632,34 @@ class PerfumeBot:
         elif query.data == "admin_full_stats":
             await self._handle_admin_full_stats_callback(update, context)
         else:
-            # Обработка неизвестных callback'ов
+            # Обработка неизвестных callback'ов с защитой от рекурсии
             logger.warning(f"Неизвестный callback: {query.data} от пользователя {user_id}")
-            try:
-                await query.edit_message_text(
-                    "❌ Неизвестная команда. Возвращаюсь в главное меню.",
-                    reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Главное меню", callback_data="back_to_menu")]])
-                )
-            except Exception as e:
-                logger.error(f"Ошибка при обработке неизвестного callback: {e}")
-                # Fallback - отправляем новое сообщение
-                await update.effective_chat.send_message(
-                    "❌ Произошла ошибка. Возвращаюсь в главное меню.",
-                    reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Главное меню", callback_data="back_to_menu")]])
-                )
+            
+            # Если back_to_menu тоже неизвестен, показываем /start без кнопок
+            if query.data == "back_to_menu":
+                try:
+                    await query.edit_message_text(
+                        "❌ Произошла ошибка навигации. Используйте команду /start для перезапуска."
+                    )
+                except Exception as e:
+                    logger.error(f"Критическая ошибка callback: {e}")
+                    await update.effective_chat.send_message(
+                        "❌ Критическая ошибка. Используйте /start для перезапуска."
+                    )
+            else:
+                # Для других неизвестных callback'ов - возврат в меню
+                try:
+                    await query.edit_message_text(
+                        "❌ Неизвестная команда. Возвращаюсь в главное меню.",
+                        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Главное меню", callback_data="back_to_menu")]])
+                    )
+                except Exception as e:
+                    logger.error(f"Ошибка при обработке неизвестного callback: {e}")
+                    # Fallback - отправляем новое сообщение
+                    await update.effective_chat.send_message(
+                        "❌ Произошла ошибка. Возвращаюсь в главное меню.",
+                        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Главное меню", callback_data="back_to_menu")]])
+                    )
 
     async def start_perfume_question(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Начинает режим вопросов о парфюмах"""
@@ -1136,6 +1150,16 @@ class PerfumeBot:
         except Exception as e:
             await update.callback_query.edit_message_text(f"❌ Ошибка: {e}")
 
+    async def _post_init_callback(self, application):
+        """Callback для инициализации после запуска бота"""
+        try:
+            logger.info("🔄 Запускаем автоматический планировщик парсера...")
+            await self.auto_parser.start_scheduler()
+            logger.info("✅ Планировщик парсера запущен успешно")
+        except Exception as e:
+            logger.error(f"❌ Ошибка запуска планировщика парсера: {e}")
+            # Парсер не критичен для работы бота, поэтому продолжаем
+
     def run(self):
         """Запускает бота"""
         try:
@@ -1147,8 +1171,8 @@ class PerfumeBot:
             # Настраиваем обработчики сигналов
             self._setup_signal_handlers()
             
-            # Запускаем автоматический планировщик парсера
-            asyncio.create_task(self.auto_parser.start_scheduler())
+            # Настраиваем post_init callback для автозапуска парсера
+            self.application.post_init = self._post_init_callback
             
             logger.info("🚀 Perfume Bot запущен и готов к работе!")
             
