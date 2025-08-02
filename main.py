@@ -121,6 +121,13 @@ class PerfumeBot:
 
     async def error_handler(self, update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
         """Обработчик ошибок"""
+        error_message = str(context.error)
+        
+        # Игнорируем устаревшие callback запросы - это нормально при долгой обработке ИИ
+        if "Query is too old" in error_message or "response timeout expired" in error_message:
+            logger.info(f"ℹ️ Игнорируем устаревший callback запрос: {error_message}")
+            return
+            
         logger.error(f"❌ Ошибка в обработчике: {context.error}")
         
         try:

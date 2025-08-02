@@ -701,8 +701,23 @@ class QuizSystem:
         # Сохраняем профиль пользователя
         self.db.save_user_quiz_profile(user_id, analysis_result['profile'])
         
-        # Получаем все подходящие парфюмы из БД
-        suitable_perfumes = self.db.get_all_perfumes_from_database()
+        # Получаем все парфюмы из БД
+        all_perfumes = self.db.get_all_perfumes_from_database()
+        
+        # Фильтруем парфюмы на основе ответов квиза для оптимизации
+        suitable_perfumes = self._filter_perfumes_by_quiz_answers(all_perfumes, analysis_result['profile'])
+        
+        logger.info(f"🎯 Отфильтровано {len(suitable_perfumes)} парфюмов из {len(all_perfumes)} для квиза")
+        
+        # Уведомляем пользователя о начале обработки ИИ
+        try:
+            if update.callback_query:
+                await update.callback_query.edit_message_text(
+                    "🧠 **Анализирую ваши предпочтения...**\n\nИИ-консультант обрабатывает результаты квиза и подбирает персональные рекомендации.\n\n⏳ Это может занять 1-2 минуты...",
+                    parse_mode='Markdown'
+                )
+        except Exception as e:
+            logger.warning(f"Не удалось обновить сообщение о обработке: {e}")
         
         # Формируем запрос к AI с анализом Edwards Wheel используя улучшенные промпты
         from ai.prompts import PromptTemplates
@@ -856,4 +871,65 @@ class QuizSystem:
             'total_keywords': len(all_keywords),
             'unique_keywords': len(set(all_keywords))
         }
+
+    def _filter_perfumes_by_quiz_answers(self, all_perfumes: List[Dict], quiz_profile: Dict) -> List[Dict]:
+        """Фильтрует парфюмы на основе ответов квиза для оптимизации промпта"""
+        
+        filtered = []
+        
+        # Получаем ключевые фильтры из профиля
+        gender = quiz_profile.get('gender', 'unisex')
+        budget = quiz_profile.get('budget_category', 'all')
+        fragrance_families = quiz_profile.get('fragrance_families', [])
+        
+        for perfume in all_perfumes:
+            should_include = True
+            
+            # Фильтр по полу
+            if gender != 'unisex' and perfume.get('gender'):
+                perfume_gender = perfume['gender'].lower()
+                if (gender == 'male' and perfume_gender not in ['male', 'unisex', 'мужской']) or \
+                   (gender == 'female' and perfume_gender not in ['female', 'unisex', 'женский']):
+                    should_include = False
+            
+            # Фильтр по бюджету (упрощенный)
+            if budget == 'budget' and perfume.get('price_formatted'):
+                # Простая проверка на бюджетность - если цена содержит большие числа
+                price_str = perfume['price_formatted'].replace(' ', '').replace(',', '')
+                if any(char.isdigit() for char in price_str):
+                    numbers = ''.join(filter(str.isdigit, price_str))
+                    if numbers and int(numbers) > 5000:  # Больше 5000 рублей
+                        should_include = False
+            
+            # Фильтр по семействам ароматов (базовая проверка)
+            if fragrance_families and perfume.get('fragrance_group'):
+                group = perfume['fragrance_group'].lower()
+                family_matches = False
+                for family in fragrance_families:
+                    if family.lower() in group or any(keyword in group for keyword in self._get_family_keywords(family)):
+                        family_matches = True
+                        break
+                if not family_matches:
+                    should_include = False
+                    
+            if should_include:
+                filtered.append(perfume)
+                
+        # Ограничиваем количество для оптимизации (максимум 500 лучших)
+        if len(filtered) > 500:
+            # Берем первые 500, можно добавить более умную логику приоритизации
+            filtered = filtered[:500]
+            
+        logger.info(f"📊 Фильтрация: {len(all_perfumes)} -> {len(filtered)} парфюмов")
+        return filtered
+    
+    def _get_family_keywords(self, family: str) -> List[str]:
+        """Возвращает ключевые слова для семейства ароматов"""
+        keywords_map = {
+            'oriental': ['oriental', 'amber', 'vanilla', 'spicy', 'warm'],
+            'woody': ['woody', 'wood', 'cedar', 'sandalwood', 'forest'],
+            'fresh': ['fresh', 'citrus', 'aquatic', 'marine', 'light'],
+            'floral': ['floral', 'flower', 'rose', 'jasmine', 'peony']
+        }
+        return keywords_map.get(family.lower(), [])
 
