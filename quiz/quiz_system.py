@@ -479,16 +479,19 @@ class QuizSystem:
         current_step = context.user_data.get('quiz_step', 0)
         current_answers = context.user_data.get('quiz_answers', {})
         
-        logger.info(f"Quiz callback: user={user_id}, step={current_step}, data={query.data}")
+        logger.info(f"Quiz callback: user={user_id}, step={current_step}, data={query.data}, current_question={self.quiz_questions[current_step]['id'] if current_step < len(self.quiz_questions) else 'N/A'}")
         
         try:
             if query.data == "quiz_next":
                 # Переход к следующему вопросу
                 next_step = current_step + 1
+                logger.info(f"Moving to next step: {current_step} -> {next_step}")
                 if next_step < len(self.quiz_questions):
                     context.user_data['quiz_step'] = next_step
+                    logger.info(f"Updated quiz_step to {next_step}")
                     await self._send_question(update, context, next_step)
                 else:
+                    logger.info(f"Quiz finished, showing results")
                     await self._finish_quiz(update, context, current_answers)
                     
             elif query.data == "quiz_finish":
@@ -513,6 +516,7 @@ class QuizSystem:
                     
                     # Проверяем что question_id соответствует текущему вопросу
                     if question['id'] == question_id:
+                        logger.info(f"Processing answer: {question_id} = {answer_value}")
                         if question['type'] == 'single_choice':
                             current_answers[question_id] = answer_value
                         elif question['type'] == 'multiple_choice':
@@ -525,16 +529,15 @@ class QuizSystem:
                                 current_answers[question_id].append(answer_value)
                         
                         context.user_data['quiz_answers'] = current_answers
+                        logger.info(f"Updated answers: {current_answers}")
                         
                         # Обновляем отображение текущего вопроса
                         await self._send_question(update, context, current_step)
                     else:
                         logger.warning(f"Question ID mismatch: expected {question['id']}, got {question_id}")
-                        await query.answer("❌ Ошибка синхронизации. Попробуйте еще раз.")
                     
         except Exception as e:
             logger.error(f"Ошибка в обработчике квиза: {e}")
-            await query.answer("❌ Произошла ошибка. Попробуйте еще раз.")
 
     async def _send_question(self, update: Update, context: ContextTypes.DEFAULT_TYPE, step: int):
         """Отправляет вопрос пользователю"""
@@ -604,24 +607,31 @@ class QuizSystem:
         question_text = f"🔬 **{progress}**\n{block_info}\n\n{question['question']}{instruction}"
         
         # Отправляем или редактируем сообщение
-        if update.callback_query:
+        if update.callback_query and update.callback_query.message:
             try:
-                await update.callback_query.edit_message_text(
-                    text=question_text,
-                    reply_markup=reply_markup,
-                    parse_mode='Markdown'
-                )
-            except Exception as e:
-                logger.error(f"Ошибка при редактировании сообщения квиза: {e}")
-                try:
-                    await update.effective_chat.send_message(
+                logger.info(f"Attempting to edit message for step {step}")
+                
+                # Проверяем, отличается ли новый контент от текущего
+                current_text = update.callback_query.message.text or ""
+                if current_text != question_text:
+                    await update.callback_query.edit_message_text(
                         text=question_text,
                         reply_markup=reply_markup,
                         parse_mode='Markdown'
                     )
-                except Exception as e2:
-                    logger.error(f"Ошибка при отправке нового сообщения квиза: {e2}")
+                    logger.info(f"Successfully edited message for step {step}")
+                else:
+                    # Если текст не изменился, обновляем только клавиатуру
+                    await update.callback_query.edit_message_reply_markup(
+                        reply_markup=reply_markup
+                    )
+                    logger.info(f"Successfully updated keyboard for step {step}")
+            except Exception as e:
+                logger.error(f"Ошибка при редактировании сообщения квиза: {e}")
+                # НЕ отправляем новое сообщение, это создает дубликаты
+                logger.error(f"Failed to edit message, this may cause UI issues")
         else:
+            logger.info(f"Sending new message for step {step}")
             await update.message.reply_text(
                 text=question_text,
                 reply_markup=reply_markup,
