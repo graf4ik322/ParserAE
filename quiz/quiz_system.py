@@ -7,6 +7,7 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
 from datetime import datetime
 import json
+import re
 
 logger = logging.getLogger(__name__)
 
@@ -20,6 +21,88 @@ class QuizSystem:
         self._validate_quiz_structure()
         logger.info("📝 QuizSystem v3.0 (Edwards Fragrance Wheel) инициализирована")
     
+    def _safe_send_message(self, text: str, max_length: int = 4000) -> str:
+        """Безопасно подготавливает текст сообщения для отправки в Telegram"""
+        try:
+            # Ограничиваем длину сообщения
+            if len(text) > max_length:
+                text = text[:max_length-100] + "\n\n📝 *Сообщение сокращено из-за ограничений Telegram*"
+            
+            # Удаляем или экранируем проблемные символы
+            text = self._escape_telegram_markdown(text)
+            
+            # Проверяем и исправляем незакрытые теги
+            text = self._fix_markdown_entities(text)
+            
+            return text
+            
+        except Exception as e:
+            logger.error(f"Ошибка при подготовке сообщения: {e}")
+            # В крайнем случае возвращаем текст без форматирования
+            return re.sub(r'[*_`\[\]()~>#+\-=|{}.!]', '', text)[:max_length]
+    
+    def _escape_telegram_markdown(self, text: str) -> str:
+        """Экранирует проблемные символы для Telegram Markdown"""
+        # Экранируем обратные слеши
+        text = text.replace('\\', '\\\\')
+        
+        # Проблемные символы для Telegram
+        problem_chars = ['_', '*', '[', ']', '(', ')', '~', '`', '>', '#', '+', '-', '=', '|', '{', '}', '.', '!']
+        
+        for char in problem_chars:
+            # Проверяем, не является ли символ частью корректной разметки
+            if not self._is_valid_markdown_char(text, char):
+                text = text.replace(char, f'\\{char}')
+        
+        return text
+    
+    def _is_valid_markdown_char(self, text: str, char: str) -> bool:
+        """Проверяет, является ли символ частью корректной Markdown разметки"""
+        if char in ['*', '_']:
+            # Проверяем парность для жирного/курсивного текста
+            return text.count(char) % 2 == 0
+        elif char in ['[', ']']:
+            # Проверяем парность скобок для ссылок
+            return text.count('[') == text.count(']')
+        elif char in ['(', ')']:
+            # Проверяем парность круглых скобок
+            return text.count('(') == text.count(')')
+        return True
+    
+    def _fix_markdown_entities(self, text: str) -> str:
+        """Исправляет незакрытые Markdown entities"""
+        try:
+            # Исправляем незакрытые жирный текст (**)
+            if text.count('**') % 2 != 0:
+                text += '**'
+            
+            # Исправляем незакрытый курсив (*) - учитываем что ** уже обработан
+            single_stars = text.count('*') - text.count('**') * 2
+            if single_stars % 2 != 0:
+                text += '*'
+            
+            # Исправляем незакрытое подчеркивание (_)
+            if text.count('_') % 2 != 0:
+                text += '_'
+            
+            # Исправляем незакрытый код (`)
+            if text.count('`') % 2 != 0:
+                text += '`'
+            
+            # Исправляем незакрытые скобки для ссылок
+            open_brackets = text.count('[')
+            close_brackets = text.count(']')
+            if open_brackets > close_brackets:
+                text += ']' * (open_brackets - close_brackets)
+            elif close_brackets > open_brackets:
+                text = '[' * (close_brackets - open_brackets) + text
+            
+            return text
+            
+        except Exception as e:
+            logger.error(f"Ошибка при исправлении Markdown entities: {e}")
+            return text
+
     def _initialize_quiz_questions(self) -> List[Dict[str, Any]]:
         """Инициализирует 15 научно обоснованных вопросов квиза"""
         return [
@@ -522,6 +605,12 @@ class QuizSystem:
         
         logger.info(f"Quiz callback: user={user_id}, step={current_step}, data={query.data}, current_question={self.quiz_questions[current_step]['id'] if current_step < len(self.quiz_questions) else 'N/A'}")
         
+        # Отвечаем на callback query чтобы убрать "часики" в интерфейсе
+        try:
+            await query.answer()
+        except Exception as e:
+            logger.warning(f"Не удалось ответить на callback query: {e}")
+        
         try:
             if query.data == "quiz_next":
                 # Переход к следующему вопросу
@@ -591,6 +680,21 @@ class QuizSystem:
                     
         except Exception as e:
             logger.error(f"Ошибка в обработчике квиза: {e}")
+            try:
+                # Попытаемся отправить уведомление об ошибке пользователю
+                error_message = "❌ Произошла ошибка при обработке квиза. Попробуйте начать заново."
+                if update.callback_query:
+                    await update.callback_query.answer(error_message)
+                    await update.callback_query.edit_message_text(
+                        text=error_message + "\n\nИспользуйте /start для возврата в главное меню.",
+                        reply_markup=InlineKeyboardMarkup([[
+                            InlineKeyboardButton("🔙 Главное меню", callback_data="back_to_menu")
+                        ]])
+                    )
+                else:
+                    await update.message.reply_text(error_message)
+            except Exception as e2:
+                logger.error(f"Ошибка при отправке уведомления об ошибке: {e2}")
 
     async def _send_question(self, update: Update, context: ContextTypes.DEFAULT_TYPE, step: int):
         """Отправляет вопрос пользователю"""
@@ -664,11 +768,14 @@ class QuizSystem:
             try:
                 logger.info(f"Attempting to edit message for step {step}")
                 
+                # Безопасно подготавливаем текст вопроса
+                safe_question_text = self._safe_send_message(question_text)
+                
                 # Проверяем, отличается ли новый контент от текущего
                 current_text = update.callback_query.message.text or ""
-                if current_text != question_text:
+                if current_text != safe_question_text:
                     await update.callback_query.edit_message_text(
-                        text=question_text,
+                        text=safe_question_text,
                         reply_markup=reply_markup,
                         parse_mode='Markdown'
                     )
@@ -685,8 +792,9 @@ class QuizSystem:
                 logger.error(f"Failed to edit message, this may cause UI issues")
         else:
             logger.info(f"Sending new message for step {step}")
+            safe_question_text = self._safe_send_message(question_text)
             await update.message.reply_text(
-                text=question_text,
+                text=safe_question_text,
                 reply_markup=reply_markup,
                 parse_mode='Markdown'
             )
@@ -789,20 +897,36 @@ class QuizSystem:
         # Отправляем результат
         if update.callback_query:
             try:
+                # Безопасно подготавливаем текст сообщения
+                safe_result_text = self._safe_send_message(result_text)
+                
                 await update.callback_query.edit_message_text(
-                    text=result_text,
+                    text=safe_result_text,
                     reply_markup=reply_markup,
                     parse_mode='Markdown'
                 )
-            except Exception:
-                await update.effective_chat.send_message(
-                    text=result_text,
-                    reply_markup=reply_markup,
-                    parse_mode='Markdown'
-                )
+            except Exception as e:
+                logger.error(f"Ошибка при редактировании сообщения с результатами квиза: {e}")
+                try:
+                    # Пробуем отправить новое сообщение с безопасным текстом
+                    safe_result_text = self._safe_send_message(result_text)
+                    await update.effective_chat.send_message(
+                        text=safe_result_text,
+                        reply_markup=reply_markup,
+                        parse_mode='Markdown'
+                    )
+                except Exception as e2:
+                    logger.error(f"Ошибка при отправке нового сообщения с результатами: {e2}")
+                    # В крайнем случае отправляем простой текст без форматирования
+                    plain_text = re.sub(r'[*_`\[\]()~>#+\-=|{}.!]', '', result_text)[:4000]
+                    await update.effective_chat.send_message(
+                        text=plain_text,
+                        reply_markup=reply_markup
+                    )
         else:
+            safe_result_text = self._safe_send_message(result_text)
             await update.message.reply_text(
-                text=result_text,
+                text=safe_result_text,
                 reply_markup=reply_markup,
                 parse_mode='Markdown'
             )
