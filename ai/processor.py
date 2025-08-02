@@ -103,9 +103,7 @@ class AIProcessor:
         """Создает промпт для результатов квиза"""
         return PromptTemplates.create_quiz_results_prompt(user_profile, suitable_perfumes)
     
-    def create_fragrance_info_prompt(self, query: str, matching_perfumes: List[Dict[str, Any]]) -> str:
-        """Создает промпт для информации об аромате"""
-        return PromptTemplates.create_fragrance_info_prompt(query, matching_perfumes)
+
     
     def process_ai_response_with_links(self, ai_response: str, db_manager) -> str:
         """Обрабатывает ответ ИИ и добавляет кликабельные ссылки"""
