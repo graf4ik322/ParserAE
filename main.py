@@ -802,11 +802,9 @@ class PerfumeBot:
             
             # Безопасно отправляем информацию с защитой от ошибок форматирования
             try:
-                # Применяем мягкое форматирование для сохранения красоты
-                safe_response = self.ai._format_text_for_telegram(ai_response)
-                
+                # НЕ форматируем повторно, так как это уже сделано в process_message()
                 await update.message.reply_text(
-                    safe_response,
+                    ai_response,
                     parse_mode='Markdown',
                     disable_web_page_preview=True,
                     reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Главное меню", callback_data="back_to_menu")]])
