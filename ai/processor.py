@@ -35,7 +35,7 @@ class AIProcessor:
                     "HTTP-Referer": "https://perfume-bot.local",
                     "X-Title": "Perfume Bot"
                 },
-                timeout=aiohttp.ClientTimeout(total=300)  # 5 минут для больших промптов (из config)
+                timeout=aiohttp.ClientTimeout(total=300)  # 5 минут для больших промптов
             )
         return self.session
     
@@ -297,12 +297,19 @@ class AIProcessor:
             if user_id and self.is_api_cooldown_active(user_id):
                 return "⏱️ Пожалуйста, подождите перед следующим запросом к ИИ."
             
-            # Отправляем запрос к ИИ
-            response = await self.call_openrouter_api(message)
+            # Отправляем запрос к ИИ с таймаутом
+            try:
+                response = await asyncio.wait_for(
+                    self.call_openrouter_api(message),
+                    timeout=300.0  # 5 минут максимум для ИИ-запроса
+                )
+            except asyncio.TimeoutError:
+                logger.error(f"Тайм-аут при запросе к ИИ для пользователя {user_id}")
+                return "⏳ Запрос к ИИ занял слишком много времени. Попробуйте упростить вопрос или повторите позже."
             
-            # Устанавливаем кулдаун после успешного запроса (используем значение из config)
+            # Устанавливаем кулдаун после успешного запроса
             if user_id:
-                self.set_api_cooldown(user_id, 30)  # 30 секунд кулдаун (из .env)
+                self.set_api_cooldown(user_id, 30)  # 30 секунд кулдаун
             
             # Форматируем ответ для Telegram
             formatted_response = self._format_text_for_telegram(response)
@@ -311,7 +318,7 @@ class AIProcessor:
             
         except Exception as e:
             logger.error(f"Ошибка при обработке сообщения: {e}")
-            return "Извините, произошла ошибка при обработке вашего запроса."
+            return "❌ Извините, произошла ошибка при обработке вашего запроса. Попробуйте позже."
 
     def search_perfumes(self, query: str, perfumes_data: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """Ищет парфюмы по запросу пользователя"""
