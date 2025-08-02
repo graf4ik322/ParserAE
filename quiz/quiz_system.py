@@ -479,6 +479,8 @@ class QuizSystem:
         current_step = context.user_data.get('quiz_step', 0)
         current_answers = context.user_data.get('quiz_answers', {})
         
+        logger.info(f"Quiz callback: user={user_id}, step={current_step}, data={query.data}")
+        
         try:
             if query.data == "quiz_next":
                 # Переход к следующему вопросу
@@ -509,21 +511,26 @@ class QuizSystem:
                     
                     question = self.quiz_questions[current_step]
                     
-                    if question['type'] == 'single_choice':
-                        current_answers[question_id] = answer_value
-                    elif question['type'] == 'multiple_choice':
-                        if question_id not in current_answers:
-                            current_answers[question_id] = []
+                    # Проверяем что question_id соответствует текущему вопросу
+                    if question['id'] == question_id:
+                        if question['type'] == 'single_choice':
+                            current_answers[question_id] = answer_value
+                        elif question['type'] == 'multiple_choice':
+                            if question_id not in current_answers:
+                                current_answers[question_id] = []
+                            
+                            if answer_value in current_answers[question_id]:
+                                current_answers[question_id].remove(answer_value)
+                            else:
+                                current_answers[question_id].append(answer_value)
                         
-                        if answer_value in current_answers[question_id]:
-                            current_answers[question_id].remove(answer_value)
-                        else:
-                            current_answers[question_id].append(answer_value)
-                    
-                    context.user_data['quiz_answers'] = current_answers
-                    
-                    # Обновляем отображение текущего вопроса
-                    await self._send_question(update, context, current_step)
+                        context.user_data['quiz_answers'] = current_answers
+                        
+                        # Обновляем отображение текущего вопроса
+                        await self._send_question(update, context, current_step)
+                    else:
+                        logger.warning(f"Question ID mismatch: expected {question['id']}, got {question_id}")
+                        await query.answer("❌ Ошибка синхронизации. Попробуйте еще раз.")
                     
         except Exception as e:
             logger.error(f"Ошибка в обработчике квиза: {e}")
@@ -558,7 +565,7 @@ class QuizSystem:
         control_buttons = []
         
         # Кнопка "Далее" (только если есть ответ на обязательный вопрос)
-        has_answer = question['id'] in current_answers and current_answers[question['id']]
+        has_answer = question['id'] in current_answers and bool(current_answers[question['id']])
         if has_answer:
             if step < len(self.quiz_questions) - 1:
                 control_buttons.append(InlineKeyboardButton("➡️ Далее", callback_data="quiz_next"))
