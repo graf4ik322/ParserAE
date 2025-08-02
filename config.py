@@ -28,11 +28,7 @@ class Config:
         self.admin_user_id = int(admin_user_id_str)
         
         # База данных
-        # В Docker используем /tmp, локально - data/
-        if os.path.exists('/app'):  # Мы в Docker контейнере
-            self.database_path = os.getenv('DATABASE_PATH', '/tmp/perfumes.db')
-        else:
-            self.database_path = os.getenv('DATABASE_PATH', 'data/perfumes.db')
+        self.database_path = os.getenv('DATABASE_PATH', 'data/perfumes.db')
         
         # API настройки
         self.api_cooldown_seconds = int(os.getenv('API_COOLDOWN_SECONDS', '30'))

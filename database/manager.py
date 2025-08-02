@@ -22,46 +22,16 @@ class DatabaseManager:
         # Создаем директорию для базы данных, если она не существует
         db_dir = os.path.dirname(db_path)
         if db_dir and not os.path.exists(db_dir):
-            try:
-                os.makedirs(db_dir, exist_ok=True)
-                logger.info(f"📁 Создана директория для базы данных: {db_dir}")
-            except PermissionError:
-                logger.warning(f"⚠️ Не удалось создать директорию {db_dir} - недостаточно прав")
-        
-        # Устанавливаем правильные права на директорию (только если возможно)
-        if os.path.exists(db_dir):
-            try:
-                os.chmod(db_dir, 0o755)
-            except PermissionError:
-                logger.warning(f"⚠️ Не удалось изменить права на директорию {db_dir}")
+            os.makedirs(db_dir, exist_ok=True)
+            logger.info(f"📁 Создана директория для базы данных: {db_dir}")
         
         self._cache = {}
         self._cache_timestamps = {}
         logger.info(f"📊 DatabaseManager инициализирован: {db_path}")
         
-        # Создаем файл базы данных с правильными правами
-        if not os.path.exists(self.db_path):
-            try:
-                # Создаем пустой файл с правильными правами
-                with open(self.db_path, 'w') as f:
-                    pass
-                os.chmod(self.db_path, 0o666)
-                logger.info(f"📁 Создан файл базы данных: {self.db_path}")
-            except Exception as e:
-                logger.warning(f"⚠️ Не удалось создать файл БД: {e}")
-        
         # Создаем таблицы при инициализации
         try:
             self.create_tables()
-            
-            # Устанавливаем правильные права на файл базы данных
-            if os.path.exists(self.db_path):
-                try:
-                    os.chmod(self.db_path, 0o666)
-                    logger.info(f"🔐 Установлены права на базу данных: {self.db_path}")
-                except PermissionError:
-                    logger.warning(f"⚠️ Не удалось изменить права на файл базы данных {self.db_path}")
-                
         except Exception as e:
             logger.error(f"❌ Ошибка при создании таблиц: {e}")
             raise
@@ -211,17 +181,6 @@ class DatabaseManager:
     def save_perfume_to_database(self, perfume_data: Dict[str, Any]) -> bool:
         """Сохраняет парфюм в БД (обновляет существующий или создает новый)"""
         try:
-            # Проверяем права на запись в базу данных (только если возможно)
-            if os.path.exists(self.db_path):
-                try:
-                    # Устанавливаем права на запись, если их нет
-                    current_mode = os.stat(self.db_path).st_mode
-                    if not (current_mode & 0o200):  # Проверяем права на запись
-                        os.chmod(self.db_path, 0o666)
-                        logger.info(f"🔐 Исправлены права на базу данных: {self.db_path}")
-                except PermissionError:
-                    logger.warning(f"⚠️ Не удалось изменить права на базу данных {self.db_path}")
-            
             with self.get_connection() as conn:
                 cursor = conn.cursor()
                 
