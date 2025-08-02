@@ -17,6 +17,7 @@ class QuizSystem:
         self.db = db_manager
         self.ai_processor = ai_processor
         self.quiz_questions = self._initialize_quiz_questions()
+        self._validate_quiz_structure()
         logger.info("📝 QuizSystem v3.0 (Edwards Fragrance Wheel) инициализирована")
     
     def _initialize_quiz_questions(self) -> List[Dict[str, Any]]:
@@ -458,6 +459,46 @@ class QuizSystem:
             }
         ]
 
+    def _validate_quiz_structure(self):
+        """Валидирует структуру квиза на наличие потенциальных проблем с callback'ами"""
+        logger.info("🔍 Валидация структуры квиза...")
+        
+        issues = []
+        question_ids = set()
+        
+        for i, question in enumerate(self.quiz_questions):
+            # Проверяем уникальность ID
+            if question['id'] in question_ids:
+                issues.append(f"Дублирующийся ID вопроса: {question['id']}")
+            question_ids.add(question['id'])
+            
+            # Проверяем ID на проблемные символы
+            if '|' in question['id']:
+                issues.append(f"Вопрос {question['id']} содержит '|' в ID")
+            
+            # Проверяем опции
+            option_values = set()
+            for option in question['options']:
+                # Проверяем уникальность значений опций
+                if option['value'] in option_values:
+                    issues.append(f"Дублирующееся значение опции в {question['id']}: {option['value']}")
+                option_values.add(option['value'])
+                
+                # Проверяем значения опций на проблемные символы
+                if '|' in option['value']:
+                    issues.append(f"Опция {option['value']} в {question['id']} содержит '|'")
+                
+                # Проверяем пустые значения
+                if not option['value']:
+                    issues.append(f"Пустое значение опции в {question['id']}")
+        
+        if issues:
+            logger.warning(f"Найдены проблемы в структуре квиза: {issues}")
+            for issue in issues:
+                logger.warning(f"  ⚠️ {issue}")
+        else:
+            logger.info("✅ Структура квиза корректна")
+
     async def start_quiz(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Начинает квиз для пользователя"""
         user_id = update.effective_user.id
@@ -512,6 +553,16 @@ class QuizSystem:
                     question_id = parts[1]
                     answer_value = parts[2]
                     
+                    # Проверяем что данные не пустые
+                    if not question_id or not answer_value:
+                        logger.error(f"Empty question_id or answer_value: id='{question_id}', value='{answer_value}'")
+                        return
+                    
+                    # Проверяем что current_step корректный
+                    if current_step >= len(self.quiz_questions):
+                        logger.error(f"Invalid step: {current_step} >= {len(self.quiz_questions)}")
+                        return
+                    
                     question = self.quiz_questions[current_step]
                     
                     # Проверяем что question_id соответствует текущему вопросу
@@ -535,6 +586,8 @@ class QuizSystem:
                         await self._send_question(update, context, current_step)
                     else:
                         logger.warning(f"Question ID mismatch: expected {question['id']}, got {question_id}")
+                else:
+                    logger.error(f"Invalid callback data format: {query.data}, parts: {parts}")
                     
         except Exception as e:
             logger.error(f"Ошибка в обработчике квиза: {e}")
