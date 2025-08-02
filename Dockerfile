@@ -17,18 +17,15 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Копируем исходный код
 COPY . .
 
-# Создаем директории для данных и логов
-RUN mkdir -p /app/data /app/logs
+# Создаем директории для данных и логов с правильными правами
+RUN mkdir -p /app/data /app/logs && \
+    chmod 777 /app/data /app/logs
 
 # Устанавливаем права доступа
 RUN chmod +x main.py
 
 # Создаем пользователя для запуска приложения (безопасность)
 RUN useradd -m -u 1001 botuser
-
-# Устанавливаем правильные права на директории данных ДО смены пользователя
-RUN chown -R botuser:botuser /app/data /app/logs
-RUN chmod 777 /app/data /app/logs
 
 # Передаем владение всем файлам приложения пользователю botuser
 RUN chown -R botuser:botuser /app

@@ -39,11 +39,22 @@ class DatabaseManager:
         self._cache_timestamps = {}
         logger.info(f"📊 DatabaseManager инициализирован: {db_path}")
         
+        # Создаем файл базы данных с правильными правами
+        if not os.path.exists(self.db_path):
+            try:
+                # Создаем пустой файл с правильными правами
+                with open(self.db_path, 'w') as f:
+                    pass
+                os.chmod(self.db_path, 0o666)
+                logger.info(f"📁 Создан файл базы данных: {self.db_path}")
+            except Exception as e:
+                logger.warning(f"⚠️ Не удалось создать файл БД: {e}")
+        
         # Создаем таблицы при инициализации
         try:
             self.create_tables()
             
-            # Устанавливаем правильные права на файл базы данных (только если возможно)
+            # Устанавливаем правильные права на файл базы данных
             if os.path.exists(self.db_path):
                 try:
                     os.chmod(self.db_path, 0o666)
@@ -58,8 +69,16 @@ class DatabaseManager:
     @contextmanager
     def get_connection(self):
         """Контекстный менеджер для работы с соединением"""
-        conn = sqlite3.connect(self.db_path)
+        # Создаем соединение с правильными правами
+        conn = sqlite3.connect(self.db_path, timeout=30.0)
         conn.row_factory = sqlite3.Row  # Возвращать строки как dict-like объекты
+        
+        # Устанавливаем правильные настройки для записи
+        conn.execute("PRAGMA journal_mode=WAL")
+        conn.execute("PRAGMA synchronous=NORMAL")
+        conn.execute("PRAGMA cache_size=10000")
+        conn.execute("PRAGMA temp_store=MEMORY")
+        
         try:
             yield conn
         finally:
