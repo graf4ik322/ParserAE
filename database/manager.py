@@ -25,6 +25,10 @@ class DatabaseManager:
             os.makedirs(db_dir, exist_ok=True)
             logger.info(f"📁 Создана директория для базы данных: {db_dir}")
         
+        # Устанавливаем правильные права на директорию
+        if os.path.exists(db_dir):
+            os.chmod(db_dir, 0o755)
+        
         self._cache = {}
         self._cache_timestamps = {}
         logger.info(f"📊 DatabaseManager инициализирован: {db_path}")
@@ -32,6 +36,12 @@ class DatabaseManager:
         # Создаем таблицы при инициализации
         try:
             self.create_tables()
+            
+            # Устанавливаем правильные права на файл базы данных
+            if os.path.exists(self.db_path):
+                os.chmod(self.db_path, 0o666)
+                logger.info(f"🔐 Установлены права на базу данных: {self.db_path}")
+                
         except Exception as e:
             logger.error(f"❌ Ошибка при создании таблиц: {e}")
             raise
@@ -173,6 +183,14 @@ class DatabaseManager:
     def save_perfume_to_database(self, perfume_data: Dict[str, Any]) -> bool:
         """Сохраняет парфюм в БД (обновляет существующий или создает новый)"""
         try:
+            # Проверяем права на запись в базу данных
+            if os.path.exists(self.db_path):
+                # Устанавливаем права на запись, если их нет
+                current_mode = os.stat(self.db_path).st_mode
+                if not (current_mode & 0o200):  # Проверяем права на запись
+                    os.chmod(self.db_path, 0o666)
+                    logger.info(f"🔐 Исправлены права на базу данных: {self.db_path}")
+            
             with self.get_connection() as conn:
                 cursor = conn.cursor()
                 
