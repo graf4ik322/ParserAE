@@ -206,51 +206,95 @@ class CompleteParfumeParser:
         if not soup:
             return details
         
-        # Ищем блок с характеристиками
-        features_block = soup.find('div', class_='ty-features-list')
-        if not features_block:
-            logger.warning(f"Не найден блок характеристик для {product_url}")
-            return details
+        # ПРИОРИТЕТ 1: Ищем КОД в основном блоке товара (более надежный способ)
+        sku_block = soup.find('div', class_='ty-control-group ty-sku-item')
+        if sku_block:
+            code_span = sku_block.find('span', class_='ty-control-group__item')
+            if code_span:
+                # Извлекаем текст, убирая HTML комментарии
+                code_text = code_span.get_text(strip=True)
+                if code_text:
+                    details['article'] = code_text
+                    logger.debug(f"Найден КОД в основном блоке: {code_text}")
         
-        # Извлекаем характеристики - ищем все элементы с классом ty-control-group
-        feature_elements = features_block.find_all(['span', 'a'], class_='ty-control-group')
-        
-        for element in feature_elements:
-            # Ищем label и value
-            label_elem = element.find('span', class_='ty-product-feature__label')
-            if not label_elem:
-                continue
+        # ПРИОРИТЕТ 2: Ищем блок с характеристиками (если КОД не найден выше)
+        if not details['article']:
+            features_block = soup.find('div', class_='ty-features-list')
+            if features_block:
+                # Извлекаем характеристики - ищем все элементы с классом ty-control-group
+                feature_elements = features_block.find_all(['span', 'a'], class_='ty-control-group')
                 
-            label = label_elem.get_text(strip=True).lower()
+                for element in feature_elements:
+                    # Ищем label и value
+                    label_elem = element.find('span', class_='ty-product-feature__label')
+                    if not label_elem:
+                        continue
+                        
+                    label = label_elem.get_text(strip=True).lower()
+                    
+                    # Ищем все span элементы в этом элементе
+                    all_spans = element.find_all('span')
+                    value = ""
+                    
+                    # Значение находится во втором span (не в том, что с классом ty-product-feature__label)
+                    for span in all_spans:
+                        if 'ty-product-feature__label' not in span.get('class', []):
+                            # Это span со значением
+                            em_tag = span.find('em')
+                            if em_tag:
+                                value = em_tag.get_text(strip=True)
+                            else:
+                                value = span.get_text(strip=True)
+                            break
+                    
+                    # Сопоставляем характеристики
+                    if ('артикул' in label or 'код' in label) and not details['article']:
+                        details['article'] = value
+                        logger.debug(f"Найден артикул в характеристиках: {value}")
+        
+        # Продолжаем парсинг остальных характеристик из features_block
+        features_block = soup.find('div', class_='ty-features-list')
+        if features_block:
+            feature_elements = features_block.find_all(['span', 'a'], class_='ty-control-group')
             
-            # Ищем все span элементы в этом элементе
-            all_spans = element.find_all('span')
-            value = ""
-            
-            # Значение находится во втором span (не в том, что с классом ty-product-feature__label)
-            for span in all_spans:
-                if 'ty-product-feature__label' not in span.get('class', []):
-                    # Это span со значением
-                    em_tag = span.find('em')
-                    if em_tag:
-                        value = em_tag.get_text(strip=True)
-                    else:
-                        value = span.get_text(strip=True)
-                    break
-            
-            # Сопоставляем характеристики
-            if 'артикул' in label or 'код' in label:
-                details['article'] = value
-            elif 'качество' in label:
-                details['quality'] = value
-            elif 'бренд' in label:
-                details['brand_detailed'] = value
-            elif 'пол' in label:
-                details['gender'] = value
-            elif 'группа аромата' in label:
-                details['fragrance_group'] = value
-            elif 'фабрика' in label:
-                details['factory_detailed'] = value
+            for element in feature_elements:
+                # Ищем label и value
+                label_elem = element.find('span', class_='ty-product-feature__label')
+                if not label_elem:
+                    continue
+                    
+                label = label_elem.get_text(strip=True).lower()
+                
+                # Ищем все span элементы в этом элементе
+                all_spans = element.find_all('span')
+                value = ""
+                
+                # Значение находится во втором span (не в том, что с классом ty-product-feature__label)
+                for span in all_spans:
+                    if 'ty-product-feature__label' not in span.get('class', []):
+                        # Это span со значением
+                        em_tag = span.find('em')
+                        if em_tag:
+                            value = em_tag.get_text(strip=True)
+                        else:
+                            value = span.get_text(strip=True)
+                        break
+                
+                # Сопоставляем характеристики (кроме артикула, который уже обработан)
+                if 'качество' in label:
+                    details['quality'] = value
+                elif 'бренд' in label:
+                    details['brand_detailed'] = value
+                elif 'пол' in label:
+                    details['gender'] = value
+                elif 'группа аромата' in label:
+                    details['fragrance_group'] = value
+                elif 'фабрика' in label:
+                    details['factory_detailed'] = value
+        
+        # Если артикул все еще не найден, выводим предупреждение
+        if not details['article']:
+            logger.warning(f"Артикул не найден для {product_url}")
         
         return details
 
