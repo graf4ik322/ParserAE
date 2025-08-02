@@ -101,8 +101,69 @@ class QuizSystem:
             
         except Exception as e:
             logger.error(f"Ошибка при исправлении Markdown entities: {e}")
+                        return text
+    
+    def _safe_format_quiz_result(self, text: str, max_length: int = 4000) -> str:
+        """Специальная функция для безопасного форматирования результатов квиза"""
+        try:
+            # Ограничиваем длину
+            if len(text) > max_length:
+                text = text[:max_length-100] + "\n\n📝 *Сообщение сокращено из-за ограничений Telegram*"
+            
+            # Минимальная обработка - убираем только явно проблемные символы
+            # НЕ трогаем нормальное форматирование
+            text = self._gentle_markdown_fix(text)
+            
             return text
-
+            
+        except Exception as e:
+            logger.error(f"Ошибка при форматировании результата квиза: {e}")
+            # В крайнем случае возвращаем простой текст
+            return re.sub(r'[*_`\[\]()~>#+\-=|{}.!]', '', text)[:max_length]
+    
+    def _gentle_markdown_fix(self, text: str) -> str:
+        """Мягкое исправление Markdown без агрессивного экранирования"""
+        # Исправляем только критичные проблемы
+        
+        # 1. Убираем избыточные слеши
+        text = re.sub(r'\\{2,}', '', text)  # Множественные слеши
+        text = text.replace('\\-', '-')     # Экранированные дефисы
+        text = text.replace('\\.', '.')     # Экранированные точки
+        text = text.replace('\\,', ',')     # Экранированные запятые
+        text = text.replace('\\:', ':')     # Экранированные двоеточия
+        text = text.replace('\\!', '!')     # Экранированные восклицательные знаки
+        text = text.replace('\\?', '?')     # Экранированные вопросительные знаки
+        
+        # 2. Исправляем только реально сломанные теги
+        lines = text.split('\n')
+        fixed_lines = []
+        
+        for line in lines:
+            # Пропускаем заголовки с эмодзи - не трогаем их
+            if line.strip().startswith(('🎯', '🔬', '🤖', '🌸', '🌟', '🌳', '💧', '💎', '🏭', '💡', '⭐', '🛒')):
+                fixed_lines.append(line)
+                continue
+            
+            # Пропускаем ссылки - не трогаем их
+            if '[' in line and '](' in line:
+                fixed_lines.append(line)
+                continue
+            
+            # Исправляем только явно сломанные теги
+            # Если нечетное количество *, добавляем недостающую
+            star_count = line.count('*')
+            if star_count % 2 != 0 and star_count > 0:
+                line += '*'
+            
+            # Аналогично для _
+            underscore_count = line.count('_')
+            if underscore_count % 2 != 0 and underscore_count > 0:
+                line += '_'
+            
+            fixed_lines.append(line)
+        
+        return '\n'.join(fixed_lines)
+    
     def _initialize_quiz_questions(self) -> List[Dict[str, Any]]:
         """Инициализирует 15 научно обоснованных вопросов квиза"""
         return [
@@ -837,7 +898,10 @@ class QuizSystem:
         
         # Отправляем запрос к AI
         try:
-            ai_response = await self.ai_processor.process_message(ai_prompt, user_id)
+            ai_response_raw = await self.ai_processor.process_message(ai_prompt, user_id)
+            
+            # Обрабатываем ответ ИИ и добавляем ссылки по артикулам (без форматирования)
+            ai_response = self.ai_processor.process_ai_response_with_links(ai_response_raw, self.db)
             
             # Формируем итоговое сообщение
             family_names = {
@@ -897,8 +961,8 @@ class QuizSystem:
         # Отправляем результат
         if update.callback_query:
             try:
-                # Безопасно подготавливаем текст сообщения
-                safe_result_text = self._safe_send_message(result_text)
+                # Специальная обработка для результатов квиза (более деликатная)
+                safe_result_text = self._safe_format_quiz_result(result_text)
                 
                 await update.callback_query.edit_message_text(
                     text=safe_result_text,
@@ -909,7 +973,7 @@ class QuizSystem:
                 logger.error(f"Ошибка при редактировании сообщения с результатами квиза: {e}")
                 try:
                     # Пробуем отправить новое сообщение с безопасным текстом
-                    safe_result_text = self._safe_send_message(result_text)
+                    safe_result_text = self._safe_format_quiz_result(result_text)
                     await update.effective_chat.send_message(
                         text=safe_result_text,
                         reply_markup=reply_markup,
@@ -924,7 +988,7 @@ class QuizSystem:
                         reply_markup=reply_markup
                     )
         else:
-            safe_result_text = self._safe_send_message(result_text)
+            safe_result_text = self._safe_format_quiz_result(result_text)
             await update.message.reply_text(
                 text=safe_result_text,
                 reply_markup=reply_markup,
