@@ -416,38 +416,24 @@ class PerfumeBot:
                 reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Главное меню", callback_data="back_to_menu")]])
             )
 
-    async def run(self):
+    def run(self):
         """Запускает бота"""
-        # Запускаем автопарсер в фоне
-        asyncio.create_task(self.auto_parser.start_scheduler())
-        
-        # Запускаем бота
-        await self.application.initialize()
-        await self.application.start()
-        
-        logger.info("🚀 Perfume Bot запущен и готов к работе!")
-        logger.info(f"🤖 Bot username: @{self.application.bot.username}")
-        logger.info(f"🔗 Bot link: https://t.me/{self.application.bot.username}")
-        
-        # Обработка graceful shutdown
-        def signal_handler(sig, frame):
-            logger.info("🛑 Получен сигнал завершения, останавливаем бота...")
-            sys.exit(0)
-        
-        signal.signal(signal.SIGINT, signal_handler)
-        signal.signal(signal.SIGTERM, signal_handler)
-        
-        # Запускаем polling с логированием
-        logger.info("📡 Запускаем polling для получения обновлений...")
-        await self.application.updater.start_polling(drop_pending_updates=True)
-        logger.info("✅ Polling запущен успешно")
-        await self.application.updater.idle()
+        try:
+            logger.info("🚀 Perfume Bot запущен и готов к работе!")
+            
+            # Запускаем polling с логированием
+            logger.info("📡 Запускаем polling для получения обновлений...")
+            self.application.run_polling(drop_pending_updates=True)
+            
+        except Exception as e:
+            logger.error(f"❌ Ошибка при запуске бота: {e}")
+            raise
 
 def main():
     """Главная функция"""
     try:
         bot = PerfumeBot()
-        asyncio.run(bot.run())
+        bot.run()
     except KeyboardInterrupt:
         logger.info("🛑 Бот остановлен пользователем")
     except Exception as e:
