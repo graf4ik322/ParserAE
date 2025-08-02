@@ -551,12 +551,20 @@ class PerfumeBot:
 
     async def show_main_menu(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Показывает главное меню"""
+        user_id = update.effective_user.id
+        
+        # Основные кнопки для всех пользователей
         keyboard = [
             [InlineKeyboardButton("🎯 Задать вопрос о парфюмах", callback_data="perfume_question")],
             [InlineKeyboardButton("📝 Пройти квиз-рекомендации", callback_data="start_quiz")],
             [InlineKeyboardButton("🔍 Информация об аромате", callback_data="fragrance_info")],
             [InlineKeyboardButton("❓ Помощь", callback_data="help")]
         ]
+        
+        # Добавляем кнопку админ-панели для администраторов
+        if user_id == self.config.admin_user_id:
+            keyboard.append([InlineKeyboardButton("🔧 Админ-панель", callback_data="admin_panel")])
+        
         reply_markup = InlineKeyboardMarkup(keyboard)
         
         welcome_text = """
@@ -581,7 +589,6 @@ class PerfumeBot:
             )
         
         # Обновляем состояние пользователя
-        user_id = update.effective_user.id
         self.db.update_session_state(user_id, "MAIN_MENU")
 
     async def button_callback(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -828,7 +835,8 @@ class PerfumeBot:
             [InlineKeyboardButton("🔑 Проверить API", callback_data="admin_api")],
             [InlineKeyboardButton("🔄 Статус парсера", callback_data="admin_parser")],
             [InlineKeyboardButton("⚡ Запустить парсинг", callback_data="admin_force_parse")],
-            [InlineKeyboardButton("📈 Полная статистика", callback_data="admin_full_stats")]
+            [InlineKeyboardButton("📈 Полная статистика", callback_data="admin_full_stats")],
+            [InlineKeyboardButton("🔙 Главное меню", callback_data="back_to_menu")]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
         
