@@ -45,6 +45,9 @@ class PerfumeBot:
 
     def _register_handlers(self):
         """Регистрирует все обработчики команд и сообщений"""
+        # Простой тестовый обработчик
+        self.application.add_handler(CommandHandler("test", self.test_command))
+        
         # Команды
         self.application.add_handler(CommandHandler("start", self.start_command))
         self.application.add_handler(CommandHandler("help", self.help_command))
@@ -56,6 +59,24 @@ class PerfumeBot:
         
         # Текстовые сообщения
         self.application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, self.handle_message))
+        
+        # Обработчик ошибок
+        self.application.add_error_handler(self.error_handler)
+        
+        logger.info("✅ Обработчики зарегистрированы")
+
+    async def test_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Простой тестовый обработчик"""
+        user = update.effective_user
+        logger.info(f"🧪 ТЕСТ: Получена команда /test от пользователя {user.id}")
+        await update.message.reply_text("✅ Бот работает! Тест успешен!")
+        logger.info("🧪 ТЕСТ: Ответ отправлен")
+
+    async def error_handler(self, update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
+        """Обработчик ошибок"""
+        logger.error(f"❌ Ошибка в обработчике: {context.error}")
+        if update and hasattr(update, 'message'):
+            await update.message.reply_text("❌ Произошла ошибка. Попробуйте позже.")
 
     async def start_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Обработчик команды /start"""
