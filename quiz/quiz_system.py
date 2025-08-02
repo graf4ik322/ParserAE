@@ -505,12 +505,12 @@ class QuizSystem:
                     context.user_data['quiz_step'] = prev_step
                     await self._send_question(update, context, prev_step)
                 
-            elif query.data.startswith("quiz_answer_"):
+            elif query.data.startswith("quiz_answer|"):
                 # Обработка ответа на вопрос
-                parts = query.data.split("_", 3)
-                if len(parts) >= 4:
-                    question_id = parts[2]
-                    answer_value = parts[3]
+                parts = query.data.split("|", 2)
+                if len(parts) >= 3:
+                    question_id = parts[1]
+                    answer_value = parts[2]
                     
                     question = self.quiz_questions[current_step]
                     
@@ -561,7 +561,7 @@ class QuizSystem:
             # Добавляем эмодзи для выбранных вариантов
             text = f"✅ {option['text']}" if is_selected else option['text']
             
-            callback_data = f"quiz_answer_{question['id']}_{option['value']}"
+            callback_data = f"quiz_answer|{question['id']}|{option['value']}"
             keyboard.append([InlineKeyboardButton(text, callback_data=callback_data)])
         
         # Добавляем кнопки управления
