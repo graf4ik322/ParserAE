@@ -103,9 +103,7 @@ class AIProcessor:
         """Создает промпт для результатов квиза"""
         return PromptTemplates.create_quiz_results_prompt(user_profile, suitable_perfumes)
     
-    def create_fragrance_info_prompt(self, query: str, matching_perfumes: List[Dict[str, Any]]) -> str:
-        """Создает промпт для информации об аромате"""
-        return PromptTemplates.create_fragrance_info_prompt(query, matching_perfumes)
+
     
     def process_ai_response_with_links(self, ai_response: str, db_manager) -> str:
         """Обрабатывает ответ ИИ и добавляет кликабельные ссылки"""
@@ -175,15 +173,98 @@ class AIProcessor:
         if len(text) > 4000:
             text = text[:3900] + "\n\n📝 *Сообщение сокращено из-за ограничений Telegram*"
         
-        # Экранируем специальные символы Markdown, которые могут вызвать проблемы
-        # Но оставляем основные форматирующие символы
-        text = text.replace('\\', '\\\\')
-        text = text.replace('`', '\\`')
+        # Безопасное экранирование Markdown символов для предотвращения ошибок парсинга
+        text = self._escape_markdown_safely(text)
         
         # Убираем лишние пустые строки
         text = re.sub(r'\n{3,}', '\n\n', text)
         
         return text
+    
+    def _escape_markdown_safely(self, text: str) -> str:
+        """Безопасно экранирует Markdown символы для предотвращения ошибок парсинга entities"""
+        try:
+            # Сначала экранируем все обратные слеши
+            text = text.replace('\\', '\\\\')
+            
+            # Экранируем символы, которые могут нарушить парсинг Markdown
+            markdown_chars = ['_', '*', '[', ']', '(', ')', '~', '`', '>', '#', '+', '-', '=', '|', '{', '}', '.', '!']
+            
+            for char in markdown_chars:
+                # Экранируем только если символ не является частью корректной Markdown разметки
+                text = self._escape_char_safely(text, char)
+            
+            # Проверяем и исправляем незакрытые Markdown теги
+            text = self._fix_unclosed_markdown_tags(text)
+            
+            return text
+            
+        except Exception as e:
+            logger.error(f"Ошибка при экранировании Markdown: {e}")
+            # В случае ошибки возвращаем простой текст без форматирования
+            return re.sub(r'[*_`\[\]()~>#+\-=|{}.!]', '', text)
+    
+    def _escape_char_safely(self, text: str, char: str) -> str:
+        """Безопасно экранирует конкретный символ"""
+        if char in ['*', '_']:
+            # Для жирного/курсива проверяем парность
+            char_count = text.count(char)
+            if char_count % 2 != 0:
+                # Если нечетное количество, экранируем все
+                text = text.replace(char, f'\\{char}')
+        elif char in ['[', ']', '(', ')']:
+            # Для скобок проверяем соответствие
+            if char == '[':
+                if text.count('[') != text.count(']'):
+                    text = text.replace('[', '\\[')
+            elif char == ']':
+                if text.count('[') != text.count(']'):
+                    text = text.replace(']', '\\]')
+            elif char == '(':
+                if text.count('(') != text.count(')'):
+                    text = text.replace('(', '\\(')
+            elif char == ')':
+                if text.count('(') != text.count(')'):
+                    text = text.replace(')', '\\)')
+        else:
+            # Для других символов экранируем если они не в начале строки как маркеры списка
+            lines = text.split('\n')
+            for i, line in enumerate(lines):
+                if char in ['#', '+', '-', '*'] and line.strip().startswith(char):
+                    continue  # Не экранируем маркеры списков и заголовков
+                lines[i] = line.replace(char, f'\\{char}')
+            text = '\n'.join(lines)
+        
+        return text
+    
+    def _fix_unclosed_markdown_tags(self, text: str) -> str:
+        """Исправляет незакрытые Markdown теги"""
+        try:
+            # Исправляем незакрытые жирный шрифт (**)
+            bold_count = text.count('**')
+            if bold_count % 2 != 0:
+                text += '**'
+            
+            # Исправляем незакрытый курсив (*)  
+            italic_count = text.count('*') - text.count('**') * 2
+            if italic_count % 2 != 0:
+                text += '*'
+                
+            # Исправляем незакрытый подчеркнутый (_)
+            underscore_count = text.count('_')
+            if underscore_count % 2 != 0:
+                text += '_'
+                
+            # Исправляем незакрытый код (`)
+            code_count = text.count('`')
+            if code_count % 2 != 0:
+                text += '`'
+            
+            return text
+            
+        except Exception as e:
+            logger.error(f"Ошибка при исправлении Markdown тегов: {e}")
+            return text
     
     async def close(self):
         """Закрывает HTTP сессию"""

@@ -181,6 +181,14 @@ class DatabaseManager:
     def save_perfume_to_database(self, perfume_data: Dict[str, Any]) -> bool:
         """Сохраняет парфюм в БД (обновляет существующий или создает новый)"""
         try:
+            # Валидируем данные перед сохранением
+            if not self._validate_perfume_data(perfume_data):
+                logger.error(f"Данные парфюма не прошли валидацию: {perfume_data.get('article', 'Unknown')}")
+                return False
+            
+            # Очищаем и нормализуем данные
+            perfume_data = self._normalize_perfume_data(perfume_data)
+            
             with self.get_connection() as conn:
                 cursor = conn.cursor()
                 
@@ -235,7 +243,82 @@ class DatabaseManager:
                 
         except Exception as e:
             logger.error(f"Ошибка при сохранении парфюма: {e}")
+            logger.error(f"Проблемные данные: {perfume_data}")
             return False
+    
+    def _validate_perfume_data(self, data: Dict[str, Any]) -> bool:
+        """Валидирует данные парфюма перед сохранением"""
+        required_fields = ['article', 'unique_key', 'brand', 'name', 'full_title']
+        
+        # Проверяем наличие обязательных полей
+        for field in required_fields:
+            if field not in data or not data[field]:
+                logger.warning(f"Отсутствует обязательное поле: {field}")
+                return False
+        
+        # Проверяем длину строк
+        string_limits = {
+            'article': 50,
+            'unique_key': 100,
+            'brand': 100,
+            'name': 200,
+            'full_title': 500,
+            'factory': 100,
+            'factory_detailed': 200,
+            'currency': 10,
+            'gender': 20,
+            'fragrance_group': 100,
+            'quality_level': 50,
+            'url': 1000
+        }
+        
+        for field, limit in string_limits.items():
+            if field in data and data[field] and len(str(data[field])) > limit:
+                logger.warning(f"Поле {field} превышает максимальную длину {limit}: {len(str(data[field]))}")
+                return False
+        
+        # Проверяем числовые поля
+        if 'price' in data and data['price'] is not None:
+            try:
+                float(data['price'])
+            except (ValueError, TypeError):
+                logger.warning(f"Некорректная цена: {data['price']}")
+                return False
+        
+        return True
+    
+    def _normalize_perfume_data(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        """Нормализует данные парфюма"""
+        normalized = data.copy()
+        
+        # Обрезаем строки до максимальной длины
+        string_limits = {
+            'article': 50,
+            'unique_key': 100,
+            'brand': 100,
+            'name': 200,
+            'full_title': 500,
+            'factory': 100,
+            'factory_detailed': 200,
+            'currency': 10,
+            'gender': 20,
+            'fragrance_group': 100,
+            'quality_level': 50,
+            'url': 1000
+        }
+        
+        for field, limit in string_limits.items():
+            if field in normalized and normalized[field]:
+                normalized[field] = str(normalized[field])[:limit].strip()
+        
+        # Нормализуем цену
+        if 'price' in normalized and normalized['price'] is not None:
+            try:
+                normalized['price'] = float(normalized['price'])
+            except (ValueError, TypeError):
+                normalized['price'] = None
+        
+        return normalized
     
     def get_perfume_url_by_article(self, article: str) -> Optional[str]:
         """Получает URL парфюма по артикулу"""
