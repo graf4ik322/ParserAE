@@ -631,6 +631,21 @@ class PerfumeBot:
             await self._handle_admin_force_parse_callback(update, context)
         elif query.data == "admin_full_stats":
             await self._handle_admin_full_stats_callback(update, context)
+        else:
+            # Обработка неизвестных callback'ов
+            logger.warning(f"Неизвестный callback: {query.data} от пользователя {user_id}")
+            try:
+                await query.edit_message_text(
+                    "❌ Неизвестная команда. Возвращаюсь в главное меню.",
+                    reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Главное меню", callback_data="back_to_menu")]])
+                )
+            except Exception as e:
+                logger.error(f"Ошибка при обработке неизвестного callback: {e}")
+                # Fallback - отправляем новое сообщение
+                await update.effective_chat.send_message(
+                    "❌ Произошла ошибка. Возвращаюсь в главное меню.",
+                    reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Главное меню", callback_data="back_to_menu")]])
+                )
 
     async def start_perfume_question(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Начинает режим вопросов о парфюмах"""

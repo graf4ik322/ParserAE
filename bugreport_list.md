@@ -162,7 +162,7 @@ async def handle_perfume_question(self, update: Update, context: ContextTypes.DE
 
 ## 🐛 BOT-003: Отсутствует обработка неизвестных callback'ов в button_callback
 
-### **Статус:** 🔍 Открыт
+### **Статус:** ✅ Исправлен
 ### **Severity:** Low
 ### **Priority:** Low
 ### **Дата создания:** 2025-08-02
