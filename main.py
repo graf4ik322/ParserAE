@@ -716,6 +716,30 @@ class PerfumeBot:
         """Обрабатывает вопросы о парфюмах"""
         user_id = update.effective_user.id
         
+        # Валидация входных данных
+        if not message_text or not message_text.strip():
+            await update.message.reply_text(
+                "❌ Пожалуйста, введите ваш вопрос о парфюмах.",
+                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Главное меню", callback_data="back_to_menu")]])
+            )
+            return
+        
+        message_text = message_text.strip()
+        
+        if len(message_text) < 2:
+            await update.message.reply_text(
+                "❌ Вопрос должен содержать минимум 2 символа.",
+                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Главное меню", callback_data="back_to_menu")]])
+            )
+            return
+        
+        if len(message_text) > 1000:
+            await update.message.reply_text(
+                "❌ Вопрос слишком длинный. Пожалуйста, сократите его до 1000 символов.",
+                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Главное меню", callback_data="back_to_menu")]])
+            )
+            return
+        
         # Отправляем уведомление о обработке
         processing_msg = await update.message.reply_text("🤔 Анализирую ваш запрос и подбираю лучшие варианты...")
         
@@ -776,6 +800,30 @@ class PerfumeBot:
     async def handle_fragrance_info(self, update: Update, context: ContextTypes.DEFAULT_TYPE, message_text: str):
         """Обрабатывает запросы информации об аромате"""
         user_id = update.effective_user.id
+        
+        # Валидация входных данных
+        if not message_text or not message_text.strip():
+            await update.message.reply_text(
+                "❌ Пожалуйста, введите название аромата или ваш запрос.",
+                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Главное меню", callback_data="back_to_menu")]])
+            )
+            return
+        
+        message_text = message_text.strip()
+        
+        if len(message_text) < 2:
+            await update.message.reply_text(
+                "❌ Запрос должен содержать минимум 2 символа.",
+                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Главное меню", callback_data="back_to_menu")]])
+            )
+            return
+        
+        if len(message_text) > 1000:
+            await update.message.reply_text(
+                "❌ Запрос слишком длинный. Пожалуйста, сократите его до 1000 символов.",
+                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Главное меню", callback_data="back_to_menu")]])
+            )
+            return
         
         # Отправляем уведомление о поиске
         searching_msg = await update.message.reply_text("🔍 Ищу информацию об аромате...")
