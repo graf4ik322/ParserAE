@@ -239,7 +239,7 @@ class CompleteParfumeParser:
                     break
             
             # Сопоставляем характеристики
-            if 'артикул' in label:
+            if 'артикул' in label or 'код' in label:
                 details['article'] = value
             elif 'качество' in label:
                 details['quality'] = value
