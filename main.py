@@ -669,7 +669,7 @@ class PerfumeBot:
         # Проверяем кулдаун
         if self.ai.is_api_cooldown_active(user_id):
             await update.callback_query.edit_message_text(
-                "⏱️ Пожалуйста, подождите 60 секунд перед следующим вопросом",
+                "⏱️ Пожалуйста, подождите 30 секунд перед следующим вопросом",
                 reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Назад", callback_data="back_to_menu")]])
             )
             return
