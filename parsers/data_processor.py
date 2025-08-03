@@ -61,9 +61,11 @@ class DataProcessor:
             fragrance_group = self._normalize_fragrance_group(details.get('fragrance_group', ''))
             quality_level = self._normalize_quality_level(details.get('quality', ''))
             
-            # URL
+            # URL - исправляем /product/ на /parfume/ для корректных ссылок
             url = raw_perfume.get('url', '')
             if url and not url.startswith('http'):
+                # Заменяем /product/ на /parfume/ для корректных ссылок
+                url = url.replace('/product/', '/parfume/')
                 url = f"https://aroma-euro.ru{url}"
             
             normalized = {
