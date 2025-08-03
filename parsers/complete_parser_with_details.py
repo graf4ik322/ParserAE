@@ -441,9 +441,9 @@ class CompleteParfumeParser:
                 else:
                     logger.debug(f"Пропущен дубликат: {perfume['full_title']}")
             
-            # Задержка между запросами
-            if i < len(all_urls):
-                time.sleep(1)
+            # Задержка между запросами убрана для оптимизации производительности
+            # if i < len(all_urls):
+            #     time.sleep(1)
         
         logger.info(f"Найдено уникальных товаров: {len(all_perfumes)}")
         
@@ -478,8 +478,8 @@ class CompleteParfumeParser:
                 except Exception as e:
                     logger.error(f"Ошибка при обработке товара: {e}")
                 
-                # Небольшая задержка между запросами
-                time.sleep(0.5)
+                # Небольшая задержка между запросами убрана для оптимизации производительности
+                # time.sleep(0.5)
         
         logger.info(f"Всего обработано товаров с подробными характеристиками: {len(completed_perfumes)}")
         return completed_perfumes
