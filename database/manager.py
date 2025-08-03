@@ -329,25 +329,9 @@ class DatabaseManager:
                 (article,)
             )
             result = cursor.fetchone()
-            if result and result['url']:
-                # Исправляем URL если содержит /product/ вместо /parfume/
-                url = result['url']
-                if '/product/' in url:
-                    url = url.replace('/product/', '/parfume/')
-                return url
-            return None
+            return result['url'] if result else None
     
-    def fix_product_urls_to_parfume(self) -> int:
-        """Исправляет URL с /product/ на /parfume/ в базе данных"""
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute(
-                "UPDATE perfumes SET url = REPLACE(url, '/product/', '/parfume/') WHERE url LIKE '%/product/%'"
-            )
-            fixed_count = cursor.rowcount
-            conn.commit()
-            logger.info(f"Исправлено URL: {fixed_count} записей")
-            return fixed_count
+
 
     def count_perfumes(self) -> int:
         """Подсчитывает общее количество активных парфюмов"""

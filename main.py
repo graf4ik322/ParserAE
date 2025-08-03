@@ -101,7 +101,7 @@ class PerfumeBot:
         self.application.add_handler(CommandHandler("adminapi", self.admin_api_command))
         self.application.add_handler(CommandHandler("adminparser", self.admin_parser_command))
         self.application.add_handler(CommandHandler("adminforce", self.admin_force_parse_command))
-        self.application.add_handler(CommandHandler("fixurls", self.fix_urls_command))
+
         
         # Callback-кнопки
         self.application.add_handler(CallbackQueryHandler(self.button_callback))
@@ -1190,29 +1190,7 @@ class PerfumeBot:
             # Освобождаем блокировку при любом завершении
             self._release_lock()
 
-    async def fix_urls_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """Команда для исправления URL с /product/ на /parfume/ в базе данных"""
-        user_id = update.effective_user.id
-        
-        if user_id != self.config.admin_user_id:
-            await update.message.reply_text("❌ У вас нет прав для исправления URL")
-            return
-        
-        try:
-            await update.message.reply_text("🔧 Исправляю URL в базе данных...")
-            
-            # Исправляем URL в базе данных
-            fixed_count = self.db.fix_product_urls_to_parfume()
-            
-            await update.message.reply_text(
-                f"✅ Исправление URL завершено!\n"
-                f"📊 Обновлено записей: {fixed_count}\n"
-                f"🔗 Все ссылки теперь используют /parfume/ вместо /product/"
-            )
-            
-        except Exception as e:
-            logger.error(f"Ошибка при исправлении URL: {e}")
-            await update.message.reply_text(f"❌ Ошибка при исправлении URL: {e}")
+
 
 def main():
     """Главная функция"""

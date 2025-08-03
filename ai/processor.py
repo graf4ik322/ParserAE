@@ -86,8 +86,8 @@ class AIProcessor:
                         logger.warning(f"Rate limit превышен для OpenRouter API (попытка {attempt + 1}/{max_retries})")
                         if attempt == max_retries - 1:
                             return "Извините, сервер перегружен. Попробуйте через несколько минут."
-                        # Минимальная задержка при rate limit для быстрого ответа
-                        await asyncio.sleep(0.1)  # Уменьшенная задержка для быстрого ответа
+                        # Ожидаем перед повторной попыткой при rate limit
+                        await asyncio.sleep(2 ** attempt)  # Exponential backoff
                         continue
                         
                     elif response.status >= 500:
@@ -96,7 +96,7 @@ class AIProcessor:
                         logger.warning(f"Серверная ошибка OpenRouter API ({response.status}): {error_text[:200]} (попытка {attempt + 1}/{max_retries})")
                         if attempt == max_retries - 1:
                             return "Извините, произошла ошибка на сервере ИИ. Попробуйте позже."
-                        await asyncio.sleep(0.1)  # Минимальная пауза при серверных ошибках
+                        await asyncio.sleep(1)  # Короткая пауза при серверных ошибках
                         continue
                         
                     else:
@@ -115,7 +115,7 @@ class AIProcessor:
                 logger.warning(f"Ошибка соединения с OpenRouter API: {e} (попытка {attempt + 1}/{max_retries})")
                 if attempt == max_retries - 1:
                     return "Извините, проблемы с соединением. Попробуйте позже."
-                await asyncio.sleep(0.1)  # Минимальная задержка при ошибках соединения
+                await asyncio.sleep(1)
                 continue
                 
             except Exception as e:
@@ -158,10 +158,6 @@ class AIProcessor:
                     url = db_manager.get_perfume_url_by_article(article)
                     
                     if url:
-                        # Исправляем URL если содержит /product/ вместо /parfume/
-                        if '/product/' in url:
-                            url = url.replace('/product/', '/parfume/')
-                            
                         # Заменяем на кликабельную ссылку "Заказать"
                         link_mark = f"[📦 Заказать]({url})"
                         processed_response = processed_response.replace(full_match, link_mark)
