@@ -166,38 +166,30 @@ class QuizSystem:
         
         return '\n'.join(fixed_lines)
     
-    async def _call_ai_with_retry(self, prompt: str, user_id: int, max_retries: int = 3, timeout: int = 60) -> str:
-        """Вызывает AI с retry логикой для квиза - быстрая отправка, долгое ожидание"""
+    async def _call_ai_with_retry(self, prompt: str, user_id: int, max_retries: int = 3) -> str:
+        """Вызывает AI с retry логикой для квиза - без таймаутов, только ожидание ответа"""
         for attempt in range(max_retries):
             try:
                 logger.info(f"🤖 Попытка {attempt + 1}/{max_retries} для квиза пользователя {user_id}")
                 
-                # Прямой вызов API с увеличенным таймаутом для квиза
-                response = await self._call_api_directly(prompt, timeout)
+                # Прямой вызов API без таймаутов
+                response = await self._call_api_directly(prompt)
                 
                 logger.info(f"✅ Успешный ответ от ИИ для квиза (попытка {attempt + 1})")
                 return response
-                
-            except asyncio.TimeoutError:
-                logger.warning(f"⏰ Таймаут {timeout}с при попытке {attempt + 1}/{max_retries} для квиза пользователя {user_id}")
-                if attempt == max_retries - 1:
-                    return f"⏳ ИИ-анализ занял более {timeout} секунд после {max_retries} попыток. Ваш профиль сохранен!"
-                # Небольшая пауза перед следующей попыткой
-                await asyncio.sleep(1)
-                continue
                 
             except Exception as e:
                 logger.error(f"❌ Ошибка при попытке {attempt + 1}/{max_retries} для квиза: {e}")
                 if attempt == max_retries - 1:
                     return "⚠️ ИИ-анализ временно недоступен. Ваш профиль сохранен!"
-                # Небольшая пауза перед следующей попыткой
-                await asyncio.sleep(1)
+                # Убираем задержки для максимальной скорости
+                # await asyncio.sleep(1)
                 continue
         
         return "❌ Не удалось получить ответ от ИИ после всех попыток"
     
-    async def _call_api_directly(self, prompt: str, timeout: int = 60) -> str:
-        """Прямой вызов API с увеличенным таймаутом для квиза"""
+    async def _call_api_directly(self, prompt: str) -> str:
+        """Прямой вызов API без таймаутов - только ожидание ответа"""
         payload = {
             "model": self.ai_processor.model,
             "messages": [
@@ -213,17 +205,15 @@ class QuizSystem:
             "presence_penalty": 0.1
         }
         
-        # Создаем сессию с увеличенным таймаутом для квиза
-        timeout_config = aiohttp.ClientTimeout(total=timeout)
-        
+        # Создаем сессию без таймаутов
         async with aiohttp.ClientSession(
             headers={
                 "Authorization": f"Bearer {self.ai_processor.api_key}",
                 "Content-Type": "application/json",
                 "HTTP-Referer": "https://perfume-bot.local",
                 "X-Title": "Perfume Bot"
-            },
-            timeout=timeout_config
+            }
+            # Убираем таймаут - пусть работает без ограничений
         ) as session:
             
             async with session.post(f"{self.ai_processor.base_url}/chat/completions", json=payload) as response:
@@ -971,7 +961,7 @@ class QuizSystem:
         try:
             if update.callback_query:
                 await update.callback_query.edit_message_text(
-                    "🧠 **Анализирую ваши предпочтения...**\n\nИИ-консультант обрабатывает результаты квиза и подбирает персональные рекомендации.\n\n⏳ Ожидаем ответ до 1 минуты...",
+                    "🧠 **Анализирую ваши предпочтения...**\n\nИИ-консультант обрабатывает результаты квиза и подбирает персональные рекомендации.\n\n⏳ Ожидаем ответ от API...",
                     parse_mode='Markdown'
                 )
         except Exception as e:
@@ -987,8 +977,8 @@ class QuizSystem:
         
         # Отправляем запрос к AI с оптимизированной логикой retry
         try:
-            # Прямой вызов API с retry логикой (3 попытки, 60 секунд на каждую)
-            ai_response_raw = await self._call_ai_with_retry(ai_prompt, user_id, max_retries=3, timeout=60)
+            # Прямой вызов API с retry логикой (3 попытки без таймаутов)
+            ai_response_raw = await self._call_ai_with_retry(ai_prompt, user_id, max_retries=3)
             
             # Проверяем, не является ли ответ сообщением об ошибке
             if ai_response_raw and ("⏳" in ai_response_raw or "⚠️" in ai_response_raw or "❌" in ai_response_raw):

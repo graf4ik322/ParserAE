@@ -666,13 +666,13 @@ class PerfumeBot:
         """Начинает режим вопросов о парфюмах"""
         user_id = update.effective_user.id
         
-        # Проверяем кулдаун
-        if self.ai.is_api_cooldown_active(user_id):
-            await update.callback_query.edit_message_text(
-                "⏱️ Пожалуйста, подождите 30 секунд перед следующим вопросом",
-                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Назад", callback_data="back_to_menu")]])
-            )
-            return
+        # Убираем проверку кулдауна для максимальной скорости
+        # if self.ai.is_api_cooldown_active(user_id):
+        #     await update.callback_query.edit_message_text(
+        #         "⏱️ Пожалуйста, подождите 30 секунд перед следующим вопросом",
+        #         reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Назад", callback_data="back_to_menu")]])
+        #     )
+        #     return
         
         question_text = """
 🎯 **Режим консультации по парфюмам**

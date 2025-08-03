@@ -34,8 +34,8 @@ class AIProcessor:
                     "Content-Type": "application/json",
                     "HTTP-Referer": "https://perfume-bot.local",
                     "X-Title": "Perfume Bot"
-                },
-                timeout=aiohttp.ClientTimeout(total=30)  # 30 секунд достаточно для 25 КБ промпта
+                }
+                # Убираем таймаут - пусть работает без ограничений
             )
         return self.session
     
@@ -86,8 +86,8 @@ class AIProcessor:
                         logger.warning(f"Rate limit превышен для OpenRouter API (попытка {attempt + 1}/{max_retries})")
                         if attempt == max_retries - 1:
                             return "Извините, сервер перегружен. Попробуйте через несколько минут."
-                        # Ожидаем перед повторной попыткой при rate limit
-                        await asyncio.sleep(2 ** attempt)  # Exponential backoff
+                        # Убираем задержки для максимальной скорости
+                        # await asyncio.sleep(2 ** attempt)  # Exponential backoff
                         continue
                         
                     elif response.status >= 500:
@@ -96,7 +96,8 @@ class AIProcessor:
                         logger.warning(f"Серверная ошибка OpenRouter API ({response.status}): {error_text[:200]} (попытка {attempt + 1}/{max_retries})")
                         if attempt == max_retries - 1:
                             return "Извините, произошла ошибка на сервере ИИ. Попробуйте позже."
-                        await asyncio.sleep(1)  # Короткая пауза при серверных ошибках
+                        # Убираем задержки для максимальной скорости
+                        # await asyncio.sleep(1)  # Короткая пауза при серверных ошибках
                         continue
                         
                     else:
@@ -115,7 +116,8 @@ class AIProcessor:
                 logger.warning(f"Ошибка соединения с OpenRouter API: {e} (попытка {attempt + 1}/{max_retries})")
                 if attempt == max_retries - 1:
                     return "Извините, проблемы с соединением. Попробуйте позже."
-                await asyncio.sleep(1)
+                # Убираем задержки для максимальной скорости
+                # await asyncio.sleep(1)
                 continue
                 
             except Exception as e:
@@ -293,23 +295,20 @@ class AIProcessor:
     async def process_message(self, message: str, user_id: int = None) -> str:
         """Обрабатывает сообщение и возвращает ответ от ИИ"""
         try:
-            # Проверяем кулдаун пользователя
-            if user_id and self.is_api_cooldown_active(user_id):
-                return "⏱️ Пожалуйста, подождите перед следующим запросом к ИИ."
+            # Убираем проверку кулдауна для максимальной скорости
+            # if user_id and self.is_api_cooldown_active(user_id):
+            #     return "⏱️ Пожалуйста, подождите перед следующим запросом к ИИ."
             
-            # Отправляем запрос к ИИ с таймаутом
+            # Отправляем запрос к ИИ без таймаута
             try:
-                response = await asyncio.wait_for(
-                    self.call_openrouter_api(message),
-                    timeout=30.0  # 30 секунд максимум для ИИ-запроса
-                )
-            except asyncio.TimeoutError:
-                logger.error(f"Тайм-аут при запросе к ИИ для пользователя {user_id}")
-                return "⏳ Запрос к ИИ занял более 30 секунд. Попробуйте упростить вопрос или повторите позже."
+                response = await self.call_openrouter_api(message)
+            except Exception as e:
+                logger.error(f"Ошибка при запросе к ИИ для пользователя {user_id}: {e}")
+                return "❌ Произошла ошибка при обращении к ИИ. Попробуйте позже."
             
-            # Устанавливаем кулдаун после успешного запроса
-            if user_id:
-                self.set_api_cooldown(user_id, 30)  # 30 секунд кулдаун
+            # Убираем кулдаун для максимальной скорости
+            # if user_id:
+            #     self.set_api_cooldown(user_id, 30)  # 30 секунд кулдаун
             
             # Форматируем ответ для Telegram
             formatted_response = self._format_text_for_telegram(response)
