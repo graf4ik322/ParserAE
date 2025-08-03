@@ -35,7 +35,7 @@ class AIProcessor:
                     "HTTP-Referer": "https://perfume-bot.local",
                     "X-Title": "Perfume Bot"
                 },
-                timeout=aiohttp.ClientTimeout(total=30)  # 30 секунд достаточно для 25 КБ промпта
+                timeout=aiohttp.ClientTimeout(total=60)  # 60 секунд достаточно для 25 КБ промпта
             )
         return self.session
     
@@ -301,15 +301,15 @@ class AIProcessor:
             try:
                 response = await asyncio.wait_for(
                     self.call_openrouter_api(message),
-                    timeout=30.0  # 30 секунд максимум для ИИ-запроса
+                    timeout=60.0  # 60 секунд максимум для ИИ-запроса
                 )
             except asyncio.TimeoutError:
                 logger.error(f"Тайм-аут при запросе к ИИ для пользователя {user_id}")
-                return "⏳ Запрос к ИИ занял более 30 секунд. Попробуйте упростить вопрос или повторите позже."
+                return "⏳ Запрос к ИИ занял более 60 секунд. Попробуйте упростить вопрос или повторите позже."
             
             # Устанавливаем кулдаун после успешного запроса
             if user_id:
-                self.set_api_cooldown(user_id, 30)  # 30 секунд кулдаун
+                self.set_api_cooldown(user_id, 60)  # 60 секунд кулдаун
             
             # Форматируем ответ для Telegram
             formatted_response = self._format_text_for_telegram(response)
