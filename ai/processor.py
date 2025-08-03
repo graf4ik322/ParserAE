@@ -6,10 +6,12 @@ import asyncio
 import logging
 import re
 import json
+import time
 from datetime import datetime, timedelta
 from typing import Dict, List, Any, Optional
 
 from .prompts import PromptTemplates
+from utils.metrics import metrics_collector, track_function
 
 logger = logging.getLogger(__name__)
 
@@ -39,6 +41,7 @@ class AIProcessor:
             )
         return self.session
     
+    @track_function("call_openrouter_api")
     async def call_openrouter_api(self, prompt: str, max_tokens: int = 4000, max_retries: int = 3) -> str:
         """Отправляет запрос к OpenRouter API с retry логикой"""
         
@@ -127,16 +130,19 @@ class AIProcessor:
         # Если все попытки исчерпаны
         return "Извините, не удалось получить ответ от ИИ. Попробуйте позже."
     
+    @track_function("create_perfume_question_prompt")
     def create_perfume_question_prompt(self, user_question: str, perfumes_data: List[Dict[str, Any]]) -> str:
         """Создает промпт для вопроса о парфюмах"""
         return PromptTemplates.create_perfume_question_prompt(user_question, perfumes_data)
     
+    @track_function("create_quiz_results_prompt")
     def create_quiz_results_prompt(self, user_profile: Dict[str, Any], suitable_perfumes: List[Dict[str, Any]]) -> str:
         """Создает промпт для результатов квиза"""
         return PromptTemplates.create_quiz_results_prompt(user_profile, suitable_perfumes)
     
 
     
+    @track_function("process_ai_response_with_links")
     def process_ai_response_with_links(self, ai_response: str, db_manager) -> str:
         """Обрабатывает ответ ИИ и добавляет кликабельные ссылки"""
         try:
@@ -292,6 +298,7 @@ class AIProcessor:
         
         return status
 
+    @track_function("process_message")
     async def process_message(self, message: str, user_id: int = None) -> str:
         """Обрабатывает сообщение и возвращает ответ от ИИ"""
         try:

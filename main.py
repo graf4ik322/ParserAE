@@ -18,6 +18,7 @@ from database.manager import DatabaseManager
 from ai.processor import AIProcessor
 from quiz.quiz_system import QuizSystem
 from parsers.auto_parser import AutoParser
+from utils.metrics import metrics_collector
 
 # Настройка логирования
 logging.basicConfig(
@@ -101,6 +102,7 @@ class PerfumeBot:
         self.application.add_handler(CommandHandler("adminapi", self.admin_api_command))
         self.application.add_handler(CommandHandler("adminparser", self.admin_parser_command))
         self.application.add_handler(CommandHandler("adminforce", self.admin_force_parse_command))
+        self.application.add_handler(CommandHandler("metrics", self.metrics_command))
 
         
         # Callback-кнопки
@@ -557,6 +559,58 @@ class PerfumeBot:
             logger.error(f"Ошибка в admin_force_parse_command: {e}")
             await processing_msg.delete()
             await update.message.reply_text(f"❌ Ошибка при запуске парсинга: {e}")
+
+    async def metrics_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Команда для просмотра метрик производительности"""
+        user_id = update.effective_user.id
+        
+        if user_id != self.config.admin_user_id:
+            await update.message.reply_text("❌ У вас нет прав для просмотра метрик")
+            return
+        
+        try:
+            summary = metrics_collector.get_performance_summary()
+            
+            if not summary['functions']:
+                await update.message.reply_text("📊 Метрики пока пусты. Выполните несколько операций для сбора данных.")
+                return
+            
+            # Формируем отчет
+            report = "📊 **Метрики производительности**\n\n"
+            
+            # Общая статистика
+            report += f"🔢 **Общая статистика:**\n"
+            report += f"• Всего функций: {summary['total_functions']}\n"
+            report += f"• Всего вызовов: {summary['total_calls']}\n"
+            report += f"• Всего ошибок: {summary['total_errors']}\n\n"
+            
+            # Детальная статистика по функциям
+            report += f"⚡ **Детальная статистика:**\n\n"
+            
+            for func_name, metrics in summary['functions'].items():
+                report += f"**{func_name}:**\n"
+                report += f"• Вызовов: {metrics['total_calls']}\n"
+                report += f"• Среднее время: {metrics['avg_time']}с\n"
+                report += f"• Мин/Макс: {metrics['min_time']}с / {metrics['max_time']}с\n"
+                report += f"• Успешность: {metrics['success_rate']}%\n"
+                if metrics['last_execution_time']:
+                    report += f"• Последний вызов: {metrics['last_execution_time']}с\n"
+                report += "\n"
+            
+            # Разбиваем на части если слишком длинный
+            if len(report) > 4000:
+                parts = [report[i:i+4000] for i in range(0, len(report), 4000)]
+                for i, part in enumerate(parts):
+                    await update.message.reply_text(
+                        f"{part}\n\n*Часть {i+1}/{len(parts)}*",
+                        parse_mode='Markdown'
+                    )
+            else:
+                await update.message.reply_text(report, parse_mode='Markdown')
+                
+        except Exception as e:
+            logger.error(f"Ошибка при получении метрик: {e}")
+            await update.message.reply_text(f"❌ Ошибка при получении метрик: {e}")
 
     async def show_main_menu(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Показывает главное меню"""

@@ -4,12 +4,14 @@
 import logging
 import asyncio
 import aiohttp
+import time
 from typing import Dict, List, Any, Optional
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
 from datetime import datetime
 import json
 import re
+from utils.metrics import metrics_collector, track_function
 
 logger = logging.getLogger(__name__)
 
@@ -166,6 +168,7 @@ class QuizSystem:
         
         return '\n'.join(fixed_lines)
     
+    @track_function("quiz_call_ai_with_retry")
     async def _call_ai_with_retry(self, prompt: str, user_id: int, max_retries: int = 3) -> str:
         """Вызывает AI с retry логикой для квиза - без таймаутов, только ожидание ответа"""
         for attempt in range(max_retries):
@@ -188,6 +191,7 @@ class QuizSystem:
         
         return "❌ Не удалось получить ответ от ИИ после всех попыток"
     
+    @track_function("quiz_call_api_directly")
     async def _call_api_directly(self, prompt: str) -> str:
         """Прямой вызов API без таймаутов - только ожидание ответа"""
         payload = {
@@ -939,6 +943,7 @@ class QuizSystem:
                 parse_mode='Markdown'
             )
 
+    @track_function("finish_quiz")
     async def _finish_quiz(self, update: Update, context: ContextTypes.DEFAULT_TYPE, quiz_answers: Dict):
         """Завершает квиз и показывает результаты"""
         user_id = update.effective_user.id
