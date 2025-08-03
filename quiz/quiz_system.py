@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import logging
+import asyncio
 from typing import Dict, List, Any, Optional
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
@@ -895,9 +896,13 @@ class QuizSystem:
             analysis_result['edwards_analysis']
         )
         
-        # Отправляем запрос к AI
+        # Отправляем запрос к AI неблокирующим образом
         try:
-            ai_response_raw = await self.ai_processor.process_message(ai_prompt, user_id)
+            # Создаем неблокирующую задачу для ИИ-запроса
+            ai_task = asyncio.create_task(self.ai_processor.process_message(ai_prompt, user_id))
+            
+            # Получаем результат с таймаутом для предотвращения долгого ожидания
+            ai_response_raw = await asyncio.wait_for(ai_task, timeout=60.0)  # 60 секунд максимум
             
             # Обрабатываем ответ ИИ и добавляем ссылки по артикулам (без форматирования)
             ai_response = self.ai_processor.process_ai_response_with_links(ai_response_raw, self.db)
@@ -925,6 +930,32 @@ class QuizSystem:
 {ai_response}
             """
             
+        except asyncio.TimeoutError:
+            logger.warning(f"Таймаут ИИ-запроса в квизе для пользователя {user_id}")
+            # Создаем сообщение о таймауте
+            family_names = {
+                'floral': 'Цветочные',
+                'oriental': 'Восточные/Амбровые', 
+                'woody': 'Древесные',
+                'fresh': 'Свежие'
+            }
+            result_text = f"""
+🎯 **Квиз завершен!**
+
+🔬 **Анализ по Edwards Fragrance Wheel:**
+🌸 Цветочные: {analysis_result['edwards_analysis']['floral']}%
+🌟 Восточные: {analysis_result['edwards_analysis']['oriental']}%
+🌳 Древесные: {analysis_result['edwards_analysis']['woody']}%
+💧 Свежие: {analysis_result['edwards_analysis']['fresh']}%
+
+**Доминирующее семейство:** {family_names.get(analysis_result['dominant_family'], analysis_result['dominant_family'])}
+
+⏳ **ИИ-анализ занял слишком много времени**
+Ваш профиль сохранен! Попробуйте использовать функцию "Задать вопрос о парфюмах" для получения персональных рекомендаций.
+
+💡 **Базовые рекомендации:**
+Исходя из вашего доминирующего ароматического семейства "{family_names.get(analysis_result['dominant_family'], analysis_result['dominant_family'])}", рекомендуем обратить внимание на соответствующие категории ароматов.
+            """
         except Exception as e:
             logger.error(f"Ошибка при обработке AI запроса: {e}")
             family_names = {

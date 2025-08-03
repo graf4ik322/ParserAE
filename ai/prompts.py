@@ -97,11 +97,14 @@ class PromptTemplates:
         # Анализируем профиль пользователя
         profile_summary = PromptTemplates._analyze_user_profile_detailed(user_profile)
         
-        # Формируем ПОЛНЫЙ список ВСЕХ подходящих парфюмов - БЕЗ ОГРАНИЧЕНИЙ
+        # Формируем оптимизированный список подходящих парфюмов (ограничиваем для производительности)
         perfumes_list = []
         factory_analysis = {}
         
-        for perfume in suitable_perfumes:  # ВСЕ парфюмы без ограничений
+        # Ограничиваем количество парфюмов до 100 для оптимизации производительности
+        limited_perfumes = suitable_perfumes[:100] if len(suitable_perfumes) > 100 else suitable_perfumes
+        
+        for perfume in limited_perfumes:
             perfume_line = (
                 f"{perfume['name']} | "
                 f"{perfume['factory']} | "
