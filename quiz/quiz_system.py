@@ -3,6 +3,7 @@
 
 import logging
 import asyncio
+import aiohttp
 from typing import Dict, List, Any, Optional
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
@@ -171,11 +172,8 @@ class QuizSystem:
             try:
                 logger.info(f"🤖 Попытка {attempt + 1}/{max_retries} для квиза пользователя {user_id}")
                 
-                # Прямой вызов API без дополнительных задержек
-                response = await asyncio.wait_for(
-                    self.ai_processor.call_openrouter_api(prompt),
-                    timeout=timeout
-                )
+                # Прямой вызов API с увеличенным таймаутом для квиза
+                response = await self._call_api_directly(prompt, timeout)
                 
                 logger.info(f"✅ Успешный ответ от ИИ для квиза (попытка {attempt + 1})")
                 return response
@@ -197,6 +195,63 @@ class QuizSystem:
                 continue
         
         return "❌ Не удалось получить ответ от ИИ после всех попыток"
+    
+    async def _call_api_directly(self, prompt: str, timeout: int = 60) -> str:
+        """Прямой вызов API с увеличенным таймаутом для квиза"""
+        payload = {
+            "model": self.ai_processor.model,
+            "messages": [
+                {
+                    "role": "user",
+                    "content": prompt
+                }
+            ],
+            "max_tokens": 4000,
+            "temperature": 0.7,
+            "top_p": 0.9,
+            "frequency_penalty": 0.1,
+            "presence_penalty": 0.1
+        }
+        
+        # Создаем сессию с увеличенным таймаутом для квиза
+        timeout_config = aiohttp.ClientTimeout(total=timeout)
+        
+        async with aiohttp.ClientSession(
+            headers={
+                "Authorization": f"Bearer {self.ai_processor.api_key}",
+                "Content-Type": "application/json",
+                "HTTP-Referer": "https://perfume-bot.local",
+                "X-Title": "Perfume Bot"
+            },
+            timeout=timeout_config
+        ) as session:
+            
+            async with session.post(f"{self.ai_processor.base_url}/chat/completions", json=payload) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    
+                    if 'choices' in data and len(data['choices']) > 0:
+                        content = data['choices'][0]['message']['content']
+                        
+                        # Логируем использование токенов
+                        usage = data.get('usage', {})
+                        total_tokens = usage.get('total_tokens', 0)
+                        logger.info(f"✅ Получен ответ от ИИ для квиза ({total_tokens} токенов)")
+                        
+                        return content
+                    else:
+                        raise Exception("Неожиданная структура ответа от OpenRouter API")
+                        
+                elif response.status == 429:
+                    raise Exception("Rate limit превышен для OpenRouter API")
+                    
+                elif response.status >= 500:
+                    error_text = await response.text()
+                    raise Exception(f"Серверная ошибка OpenRouter API ({response.status}): {error_text[:200]}")
+                    
+                else:
+                    error_text = await response.text()
+                    raise Exception(f"Ошибка OpenRouter API ({response.status}): {error_text}")
     
     def _initialize_quiz_questions(self) -> List[Dict[str, Any]]:
         """Инициализирует 15 научно обоснованных вопросов квиза"""
